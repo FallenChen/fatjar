@@ -28,18 +28,15 @@ import java.net.URLClassLoader;
 public class FatJarClassLoaderUtils {
 
     public static void injectFatJarClassLoader() {
-        injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
+        injectFatJarClassLoader((URLClassLoader) FatJarClassLoaderUtils.class.getClassLoader());
     }
 
-    public static void injectFatJarClassLoader(ClassLoader targetClassLoader) {
-        URL[] urls = null;
-        if (targetClassLoader instanceof URLClassLoader) {
-            urls = ((URLClassLoader) targetClassLoader).getURLs();
-        }
+    public static void injectFatJarClassLoader(URLClassLoader targetClassLoader) {
+        URL[] urls = targetClassLoader.getURLs();
         injectFatJarClassLoader(targetClassLoader, urls);
     }
 
-    private static void injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] urls) {
+    public static void injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] urls) {
         try {
             ClassLoader parent = targetClassLoader.getParent();
             FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(urls, parent);
