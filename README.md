@@ -1,4 +1,4 @@
-# DDAL
+# FATJAR
 
 fatjar is a simple solution to resovle the conflicting of jars by providing a independent classloader for each fat-jar automatically.
 
