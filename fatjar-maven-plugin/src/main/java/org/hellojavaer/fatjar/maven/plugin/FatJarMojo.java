@@ -40,9 +40,11 @@ import java.util.zip.ZipEntry;
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, threadSafe = true, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class FatJarMojo extends AbstractMojo {
 
-    private static final String    FAT_JAR_VERSION           = "1.0.0";
+    private static final String    FAT_JAR_VERSION     = "1.0.0";
 
-    private static final String    FAT_JAR_VERSION_CONSTANTS = "Fat-Jar-Version";
+    private static final String    FAT_JAR_VERSION_KEY = "Fat-Jar-Version";
+
+    private static final String    START_CLASS_KEY     = "Start-Class";
 
     @Parameter(defaultValue = "${project.artifacts}", required = true, readonly = true)
     private Collection<Artifact>   artifacts;
@@ -51,14 +53,23 @@ public class FatJarMojo extends AbstractMojo {
     private Collection<Dependency> dependencies;
 
     @Parameter(defaultValue = "${project.build.directory}", required = true, readonly = true)
-    private File                   outputDirectory;
+    private File                   targetDirectory;
 
     @Parameter(defaultValue = "${project.build.finalName}.jar", required = true)
     private String                 fileName;
 
+    @Parameter(defaultValue = "", property = "startClass", required = false)
+    private String                 startClass;
+
+    @Parameter(defaultValue = "lib/", property = "libDirectory", required = false)
+    private String                 libDirectory;
+
     public void execute() throws MojoExecutionException {
         if (artifacts == null || artifacts.isEmpty() || dependencies == null || dependencies.isEmpty()) {
             throw new MojoExecutionException("Dependency is empty");
+        }
+        if (!libDirectory.endsWith("/")) {
+            libDirectory = libDirectory + "/";
         }
         File directDependencyJarFile = null;
         Map<Artifact, String> fileNameMap = new LinkedHashMap<Artifact, String>();
@@ -99,13 +110,19 @@ public class FatJarMojo extends AbstractMojo {
             directDependencyJarInputStream = new JarInputStream(new FileInputStream(directDependencyJarFile));
             Manifest manifest = directDependencyJarInputStream.getManifest();
             Attributes attributes = manifest.getMainAttributes();
-            if (attributes != null && attributes.getValue(FAT_JAR_VERSION_CONSTANTS) != null) {
+            if (attributes != null && attributes.getValue(FAT_JAR_VERSION_KEY) != null) {
                 throw new IllegalArgumentException("Can't repeated package fat jar for fat-jar");
             }
-            attributes.putValue(FAT_JAR_VERSION_CONSTANTS, FAT_JAR_VERSION);
+            attributes.putValue(FAT_JAR_VERSION_KEY, FAT_JAR_VERSION);
+            if (startClass != null) {
+                startClass = startClass.trim();
+                if (startClass.length() > 0) {
+                    attributes.putValue(START_CLASS_KEY, startClass);
+                }
+            }
 
             // 1.create output file
-            jarFile = new File(outputDirectory, fileName);
+            jarFile = new File(targetDirectory, fileName);
             out = new JarOutputStream(new FileOutputStream(jarFile, false), manifest);
 
             // 2.import direct dependency
@@ -118,7 +135,7 @@ public class FatJarMojo extends AbstractMojo {
 
             // 3.import indirect dependency
             for (Map.Entry<Artifact, String> entry : fileNameMap.entrySet()) {
-                out.putNextEntry(new ZipEntry("LIB-INF/" + entry.getValue()));
+                out.putNextEntry(new ZipEntry(libDirectory + entry.getValue()));
                 IOUtils.copy(new FileInputStream(entry.getKey().getFile()), out);
                 out.closeEntry();
             }
