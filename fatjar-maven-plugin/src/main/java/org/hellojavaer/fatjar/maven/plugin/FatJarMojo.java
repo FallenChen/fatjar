@@ -76,30 +76,39 @@ public class FatJarMojo extends AbstractMojo {
         Map<String, Artifact> names = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
             boolean matched = false;
-            for (Dependency dependency : dependencies) {
-                if (dependency.getGroupId().equals(artifact.getGroupId())
+            for (Dependency dependency : dependencies) {//
+                if (dependency.getGroupId().equals(artifact.getGroupId())//
                     && dependency.getArtifactId().equals(artifact.getArtifactId())) {
-                    if (directDependencyJarFile == null) {
-                        directDependencyJarFile = artifact.getFile();
-                        matched = true;
-                    } else {
-                        throw new MojoExecutionException("Direct dependency limits 1");
+                    String dependencyDesc = dependency.toString();
+                    getLog().info("direct " + dependencyDesc);
+                    if ("true".equalsIgnoreCase(dependency.getOptional())) {
+                        if (directDependencyJarFile == null) {
+                            directDependencyJarFile = artifact.getFile();
+                            matched = true;
+                            getLog().info("use " + dependencyDesc + " as main-dependency");
+                        } else {
+                            throw new MojoExecutionException(
+                                                             "fatjar-maven-plugin use the direct dependency which 'optional' is true as the main-dependency,"
+                                                                     + " but there are multiple direct dependencies match this condition.");
+                        }
                     }
                 }
             }
             if (matched == false) {
-                Artifact exsit = names.get(artifact.getFile().getName());
-                if (exsit == null) {
+                Artifact exist = names.get(artifact.getFile().getName());
+                if (exist == null) {
                     names.put(artifact.getFile().getName(), artifact);
                     fileNameMap.put(artifact, artifact.getFile().getName());
                 } else {
                     fileNameMap.put(artifact, artifact.getGroupId() + "-" + artifact.getFile().getName());
-                    fileNameMap.put(exsit, exsit.getGroupId() + "-" + exsit.getFile().getName());
+                    fileNameMap.put(exist, exist.getGroupId() + "-" + exist.getFile().getName());
                 }
             }
         }
         if (directDependencyJarFile == null) {
-            throw new MojoExecutionException("Direct dependency is empty");
+            throw new MojoExecutionException(
+                                             "fatjar-maven-plugin use the direct dependency which 'optional' is true as the main-dependency,"
+                                                     + " and there isn't a direct dependency which matches this condition.");
         }
 
         JarOutputStream out = null;
@@ -111,7 +120,7 @@ public class FatJarMojo extends AbstractMojo {
             Manifest manifest = directDependencyJarInputStream.getManifest();
             Attributes attributes = manifest.getMainAttributes();
             if (attributes != null && attributes.getValue(FAT_JAR_VERSION_KEY) != null) {
-                throw new IllegalArgumentException("Can't repeated package fat jar for fat-jar");
+                throw new IllegalArgumentException("can't repeated package fat jar for fat-jar");
             }
             attributes.putValue(FAT_JAR_VERSION_KEY, FAT_JAR_VERSION);
             if (startClass != null) {
@@ -146,5 +155,4 @@ public class FatJarMojo extends AbstractMojo {
             IOUtils.closeQuietly(directDependencyJarInputStream);
         }
     }
-
 }
