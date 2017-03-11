@@ -10,6 +10,7 @@
 
 	<modules>
 		<module>fatjar-maven-plugin</module>
+		<module>fatjar-core</module>
 	</modules>
 
 
