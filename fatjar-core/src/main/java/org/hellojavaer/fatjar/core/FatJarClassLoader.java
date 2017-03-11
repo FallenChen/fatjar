@@ -147,6 +147,9 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     private void listJarFiles0(List<File> jars, File file) {
+        if (!file.exists() || !file.canRead()) {
+            return;
+        }
         if (file.isDirectory()) {
             if (file.getName().startsWith(".")) {
                 return;
