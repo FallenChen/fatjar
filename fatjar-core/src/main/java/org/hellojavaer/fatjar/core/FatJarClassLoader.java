@@ -219,7 +219,7 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private boolean isDependencyLib(JarEntry jarEntry) {
         String name = jarEntry.getName();
-        if (name.endsWith(".jar")) {
+        if (!jarEntry.isDirectory() && name.endsWith(".jar")) {
             return true;
         } else {
             return false;

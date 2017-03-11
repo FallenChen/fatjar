@@ -18,7 +18,8 @@ package org.hellojavaer.fatjar.core.utils;
 import org.hellojavaer.fatjar.core.FatJarClassLoader;
 
 import java.lang.reflect.Field;
-import java.util.concurrent.ConcurrentHashMap;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 /**
  *
@@ -26,24 +27,29 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class FatJarClassLoaderUtils {
 
-    private static final ConcurrentHashMap<ClassLoader, FatJarClassLoader> injectRecords = new ConcurrentHashMap<>();
-
     public static void injectFatJarClassLoader() {
         injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
     }
 
     public static void injectFatJarClassLoader(ClassLoader targetClassLoader) {
+        URL[] urls = null;
+        if (targetClassLoader instanceof URLClassLoader) {
+            urls = ((URLClassLoader) targetClassLoader).getURLs();
+        }
+        injectFatJarClassLoader(targetClassLoader, urls);
+    }
+
+    private static void injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] urls) {
         try {
             ClassLoader parent = targetClassLoader.getParent();
-            FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(null, parent);
-            if (injectRecords.putIfAbsent(targetClassLoader, fatJarClassLoader) == null) {
-                Class clazz = ClassLoader.class;
-                Field nameField = clazz.getDeclaredField("parent");
-                nameField.setAccessible(true);
-                nameField.set(targetClassLoader, fatJarClassLoader);
-            }
+            FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(urls, parent);
+            Class clazz = ClassLoader.class;
+            Field nameField = clazz.getDeclaredField("parent");
+            nameField.setAccessible(true);
+            nameField.set(targetClassLoader, fatJarClassLoader);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
+
 }
