@@ -39,8 +39,6 @@ public class FatJarClassLoader extends URLClassLoader {
     private static final String        CLASSS_SUBFIX     = ".class";
     private static final String        SEPARATOR         = "!/";
 
-    private URL[]                      urls              = null;
-
     private boolean                    delegate          = false;
 
     private JarFile                    currentJar;
@@ -67,36 +65,23 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     public FatJarClassLoader(URL[] urls, ClassLoader parent, boolean delegate) {
-        super(new URL[0], parent);
-        this.urls = urls;
+        super(urls, parent);
         this.delegate = delegate;
         init();
     }
 
     public FatJarClassLoader(URL[] urls, ClassLoader parent) {
-        super(new URL[0], parent);
-        this.urls = urls;
+        super(urls, parent);
         init();
     }
 
     public FatJarClassLoader(URL[] urls) {
-        super(new URL[0]);
-        this.urls = urls;
+        super(urls);
         init();
     }
 
     private void init() {
-        if (urls == null || urls.length == 0) {
-            URL url = getClassLocation(FatJarClassLoader.class);
-            if (url != null) {
-                this.urls = new URL[] { url };
-            } else {
-                return;
-            }
-        } else {
-            this.urls = urls;
-        }
-        for (URL url : urls) {
+        for (URL url : getURLs()) {
             List<File> jarFiles = listJarFiles(url);
             if (jarFiles != null) {
                 for (File jarFile : jarFiles) {
@@ -113,29 +98,6 @@ public class FatJarClassLoader extends URLClassLoader {
                     }
                 }
             }
-        }
-    }
-
-    private URL getClassLocation(Class clazz) {
-        if (clazz == null) {
-            return null;
-        }
-        String classPath = clazz.getName().replace('.', '/') + ".class";
-        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
-        if (codeSource != null) {
-            URL locationURL = codeSource.getLocation();
-            String location = locationURL.getPath();
-            if (location.endsWith(classPath)) {
-                try {
-                    return new URL(location.substring(0, location.length() - classPath.length()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                return locationURL;
-            }
-        } else {
-            return null;
         }
     }
 

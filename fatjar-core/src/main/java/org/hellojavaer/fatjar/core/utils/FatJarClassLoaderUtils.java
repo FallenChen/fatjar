@@ -20,6 +20,7 @@ import org.hellojavaer.fatjar.core.FatJarClassLoader;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.CodeSource;
 
 /**
  *
@@ -28,11 +29,16 @@ import java.net.URLClassLoader;
 public class FatJarClassLoaderUtils {
 
     public static void injectFatJarClassLoader() {
-        injectFatJarClassLoader((URLClassLoader) FatJarClassLoaderUtils.class.getClassLoader());
+        injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
     }
 
-    public static void injectFatJarClassLoader(URLClassLoader targetClassLoader) {
-        URL[] urls = targetClassLoader.getURLs();
+    public static void injectFatJarClassLoader(ClassLoader targetClassLoader) {
+        URL[] urls = null;
+        if (targetClassLoader instanceof URLClassLoader) {
+            urls = ((URLClassLoader) targetClassLoader).getURLs();
+        } else {
+            urls = new URL[] { getClassLocation(FatJarClassLoaderUtils.class) };
+        }
         injectFatJarClassLoader(targetClassLoader, urls);
     }
 
@@ -46,6 +52,29 @@ public class FatJarClassLoaderUtils {
             nameField.set(targetClassLoader, fatJarClassLoader);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static URL getClassLocation(Class clazz) {
+        if (clazz == null) {
+            return null;
+        }
+        String classPath = clazz.getName().replace('.', '/') + ".class";
+        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
+        if (codeSource != null) {
+            URL locationURL = codeSource.getLocation();
+            String location = locationURL.getPath();
+            if (location.endsWith(classPath)) {
+                try {
+                    return new URL(location.substring(0, location.length() - classPath.length()));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                return locationURL;
+            }
+        } else {
+            return null;
         }
     }
 
