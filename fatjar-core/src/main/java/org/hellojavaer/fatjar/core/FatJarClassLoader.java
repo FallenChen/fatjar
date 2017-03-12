@@ -42,7 +42,7 @@ public class FatJarClassLoader extends URLClassLoader {
     private static final String                     CLASSS_SUBFIX     = ".class";
     private static final String                     SEPARATOR         = "!/";
 
-    private boolean                                 delegate          = false;
+    private boolean                                 delegateLoad      = false;
 
     private JarFile                                 currentJar;
     private List<JarFile>                           dependencyJars    = new ArrayList<>();
@@ -80,9 +80,9 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    public FatJarClassLoader(URL[] urls, ClassLoader parent, boolean delegate) {
+    public FatJarClassLoader(URL[] urls, ClassLoader parent, boolean delegateLoad) {
         super(urls, parent);
-        this.delegate = delegate;
+        this.delegateLoad = delegateLoad;
         init();
     }
 
@@ -146,11 +146,11 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private FatJarClassLoader(JarFile currentJar, ClassLoader parent, String pathPrefix, boolean delegate) {
+    private FatJarClassLoader(JarFile currentJar, ClassLoader parent, String pathPrefix, boolean delegateLoad) {
         super(new URL[0], parent);
         this.currentJar = currentJar;
         this.pathPrefix = pathPrefix;
-        this.delegate = delegate;
+        this.delegateLoad = delegateLoad;
 
         Enumeration<JarEntry> jarEntries = currentJar.entries();
         if (jarEntries != null) {
@@ -164,7 +164,7 @@ public class FatJarClassLoader extends URLClassLoader {
                         if (isFatJar(manifest)) {
                             subClassLoaders.add(new FatJarClassLoader(subJarFile, parent, pathPrefix
                                                                                           + jarEntry.getName()
-                                                                                          + SEPARATOR, delegate));
+                                                                                          + SEPARATOR, delegateLoad));
                         } else {
                             dependencyJars.add(subJarFile);
                         }
@@ -235,7 +235,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2. parent delegate
-            if (delegate) {
+            if (delegateLoad) {
                 try {
                     clazz = Class.forName(name, false, getParent());
                     if (clazz != null) {
@@ -281,7 +281,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 4.
-            if (!delegate) {
+            if (!delegateLoad) {
                 try {
                     clazz = Class.forName(name, false, getParent());
                     if (clazz != null) {
@@ -315,7 +315,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2. parent delegate
-            if (delegate) {
+            if (delegateLoad) {
                 url = getParent().getResource(name);
                 if (url != null) {
                     return url;
@@ -329,7 +329,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 4.
-            if (delegate) {
+            if (delegateLoad) {
                 url = getParent().getResource(name);
                 if (url != null) {
                     return url;
@@ -355,7 +355,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2. parent delegate
-            if (delegate) {
+            if (delegateLoad) {
                 inputStream = getParent().getResourceAsStream(name);
                 if (inputStream != null) {
                     return inputStream;
@@ -369,7 +369,7 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 4.
-            if (delegate) {
+            if (delegateLoad) {
                 inputStream = getParent().getResourceAsStream(name);
                 if (inputStream != null) {
                     return inputStream;
