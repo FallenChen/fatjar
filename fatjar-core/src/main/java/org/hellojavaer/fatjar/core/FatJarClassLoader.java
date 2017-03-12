@@ -177,7 +177,7 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected JarFile buildJarFile(InputStream inputStream) throws IOException {
-        File tempFile = File.createTempFile("fatjar_" + String.valueOf(System.currentTimeMillis()), ".jar");
+        File tempFile = File.createTempFile("_fatjar_" + String.valueOf(System.currentTimeMillis()), ".jar");
         FileOutputStream tempOut = new FileOutputStream(tempFile);
         int n;
         byte[] buffer = new byte[1024];
