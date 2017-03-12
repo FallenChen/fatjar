@@ -16,6 +16,8 @@
 package org.hellojavaer.fatjar.core.utils;
 
 import org.hellojavaer.fatjar.core.FatJarClassLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -28,28 +30,31 @@ import java.security.CodeSource;
  */
 public class FatJarClassLoaderUtils {
 
-    public static void injectFatJarClassLoader() {
-        injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
+    private static final Logger logger = LoggerFactory.getLogger(FatJarClassLoaderUtils.class);
+
+    public static FatJarClassLoader injectFatJarClassLoader() {
+        return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
     }
 
-    public static void injectFatJarClassLoader(ClassLoader targetClassLoader) {
+    public static FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader) {
         URL[] urls = null;
         if (targetClassLoader instanceof URLClassLoader) {
             urls = ((URLClassLoader) targetClassLoader).getURLs();
         } else {
             urls = new URL[] { getClassLocation(FatJarClassLoaderUtils.class) };
         }
-        injectFatJarClassLoader(targetClassLoader, urls);
+        return injectFatJarClassLoader(targetClassLoader, urls, false);
     }
 
-    public static void injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] urls) {
+    public static FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] jatJarClassPaths,boolean delegateLoad) {
         try {
             ClassLoader parent = targetClassLoader.getParent();
-            FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(urls, parent);
+            FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jatJarClassPaths, parent, delegateLoad);
             Class clazz = ClassLoader.class;
             Field nameField = clazz.getDeclaredField("parent");
             nameField.setAccessible(true);
             nameField.set(targetClassLoader, fatJarClassLoader);
+            return fatJarClassLoader;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

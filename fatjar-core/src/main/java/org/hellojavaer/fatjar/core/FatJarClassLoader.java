@@ -18,7 +18,9 @@ package org.hellojavaer.fatjar.core;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.AccessControlException;
 import java.security.CodeSource;
+import java.security.Policy;
 import java.security.cert.Certificate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +54,8 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private String                                  pathPrefix        = "";
 
-    private static ClassLoader                      j2seClassLoader;
+    private static ClassLoader                      j2seClassLoader   = null;
+    private static SecurityManager                  securityManager   = null;
 
     private final ConcurrentHashMap<String, Object> lockMap           = new ConcurrentHashMap<>();
 
@@ -65,6 +68,16 @@ public class FatJarClassLoader extends URLClassLoader {
             }
         }
         j2seClassLoader = cl;
+
+        securityManager = System.getSecurityManager();
+        if (securityManager != null) {
+            try {
+                Policy policy = Policy.getPolicy();
+                policy.refresh();
+            } catch (AccessControlException e) {
+                // ignore
+            }
+        }
     }
 
     public FatJarClassLoader(URL[] urls, ClassLoader parent, boolean delegate) {
@@ -94,7 +107,7 @@ public class FatJarClassLoader extends URLClassLoader {
                         if (isFatJar(manifest)) {
                             URL path = jarFile.getCanonicalFile().toURI().toURL();
                             subClassLoaders.add(new FatJarClassLoader(jar, getParent(), "jar:" + path.toString()
-                                                                                        + SEPARATOR, delegate));
+                                                                                        + SEPARATOR, false));
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -394,16 +407,23 @@ public class FatJarClassLoader extends URLClassLoader {
         if (resource != null) {
             return resource.getClazz();
         }
-
-        String packageName = null;
         String path = name.replace('.', '/') + CLASSS_SUBFIX;
         resource = findResourceInternal(name, path);
         if (resource == null) {
             return null;
         } else {
+            String packageName = null;
             int pos = name.lastIndexOf('.');
-            if (pos < -1) {
+            if (pos >= 0) {
                 packageName = name.substring(0, pos);
+                if (securityManager != null) {
+                    try {
+                        securityManager.checkPackageAccess(packageName);
+                    } catch (SecurityException se) {
+                        String error = "Security Violation, attempt to use Restricted Class: " + name;
+                        throw new ClassNotFoundException(error, se);
+                    }
+                }
             }
             Package pkg = null;
             if (packageName != null) {
