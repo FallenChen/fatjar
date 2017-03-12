@@ -15,7 +15,7 @@
  */
 package org.hellojavaer.fatjar.core.boot.jee;
 
-import org.hellojavaer.fatjar.core.utils.FatJarClassLoaderUtils;
+import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;

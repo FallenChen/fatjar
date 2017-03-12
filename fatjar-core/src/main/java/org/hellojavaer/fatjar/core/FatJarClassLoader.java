@@ -159,7 +159,8 @@ public class FatJarClassLoader extends URLClassLoader {
                 if (isDependencyLib(jarEntry)) {
                     try {
                         InputStream inputStream = currentJar.getInputStream(jarEntry);
-                        JarFile subJarFile = buildJarFile(inputStream);
+                        JarFile subJarFile = FatJarTempFileManager.buildJarFile(pathPrefix + jarEntry.getName(),
+                                                                                jarEntries.toString(), inputStream);
                         Manifest manifest = subJarFile.getManifest();
                         if (isFatJar(manifest)) {
                             subClassLoaders.add(new FatJarClassLoader(subJarFile, parent, pathPrefix
@@ -174,17 +175,6 @@ public class FatJarClassLoader extends URLClassLoader {
                 }// else ignore
             }
         }
-    }
-
-    protected JarFile buildJarFile(InputStream inputStream) throws IOException {
-        File tempFile = File.createTempFile("_fatjar_" + String.valueOf(System.currentTimeMillis()), ".jar");
-        FileOutputStream tempOut = new FileOutputStream(tempFile);
-        int n;
-        byte[] buffer = new byte[1024];
-        while ((n = inputStream.read(buffer)) != -1) {
-            tempOut.write(buffer, 0, n);
-        }
-        return new JarFile(tempFile);
     }
 
     protected boolean isFatJar(Manifest manifest) {
@@ -210,7 +200,7 @@ public class FatJarClassLoader extends URLClassLoader {
     @Override
     public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         Class<?> clazz = null;
-        synchronized (getLock(name)) {
+        synchronized (getLockObject(name)) {
             // 0. find in local cache
             ResourceEntry resource = loadedResources.get(name);
             if (resource != null) {
@@ -301,7 +291,7 @@ public class FatJarClassLoader extends URLClassLoader {
     //
     @Override
     public synchronized URL getResource(String name) {
-        synchronized (getLock(name)) {
+        synchronized (getLockObject(name)) {
             // 0. find in local cache
             ResourceEntry resource = loadedResources.get(name);
             if (resource != null) {
@@ -341,7 +331,7 @@ public class FatJarClassLoader extends URLClassLoader {
 
     @Override
     public synchronized InputStream getResourceAsStream(String name) {
-        synchronized (getLock(name)) {
+        synchronized (getLockObject(name)) {
             // 0. find in local cache
             ResourceEntry resource = loadedResources.get(name);
             if (resource != null) {
@@ -387,7 +377,7 @@ public class FatJarClassLoader extends URLClassLoader {
     // get from local
     @Override
     public synchronized URL findResource(String name) {
-        synchronized (getLock(name)) {
+        synchronized (getLockObject(name)) {
             ResourceEntry resource = findResourceInternal(name, name);
             return resource.getUrl();
         }
@@ -509,7 +499,7 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private Object getLock(String className) {
+    private Object getLockObject(String className) {
         Object newLock = new Object();
         Object lock = lockMap.putIfAbsent(className, newLock);
         if (lock == null) {

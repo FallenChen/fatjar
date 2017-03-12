@@ -13,11 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hellojavaer.fatjar.core.utils;
-
-import org.hellojavaer.fatjar.core.FatJarClassLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package org.hellojavaer.fatjar.core;
 
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -32,9 +28,9 @@ import java.util.Map;
  */
 public class FatJarClassLoaderUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(FatJarClassLoaderUtils.class);
+    private static final Map<ClassLoader, FatJarClassLoader> classLoaderMap       = new HashMap<>();
 
-    private static final Map<ClassLoader, FatJarClassLoader> classLoaderMap = new HashMap<>();
+    private static boolean                                   registeredURLHandler = false;
 
     public static FatJarClassLoader injectFatJarClassLoader() {
         return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
@@ -51,19 +47,23 @@ public class FatJarClassLoaderUtils {
     }
 
     public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
-                                                                         URL[] jatJarClassPaths, boolean delegateLoad) {
+                                                                         URL[] fatJarClassPaths, boolean delegateLoad) {
         FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
         if (fatJarClassLoader != null) {
             return fatJarClassLoader;
         } else {
             try {
                 ClassLoader parent = targetClassLoader.getParent();
-                fatJarClassLoader = new FatJarClassLoader(jatJarClassPaths, parent, delegateLoad);
+                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, delegateLoad);
                 Class clazz = ClassLoader.class;
                 Field nameField = clazz.getDeclaredField("parent");
                 nameField.setAccessible(true);
                 nameField.set(targetClassLoader, fatJarClassLoader);
-                //TODO: log
+                info(new StringBuilder("[ FatJarClassLoaderUtils.injectFatJarClassLoader targetClassLoader:{class:")//
+                .append(targetClassLoader.getClass())//
+                .append("},fatJarClassLoader:{delegateLoad:").append(delegateLoad)//
+                .append("} ]")//
+                .toString());
                 return fatJarClassLoader;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -92,6 +92,10 @@ public class FatJarClassLoaderUtils {
         } else {
             return null;
         }
+    }
+
+    private static void info(String msg) {
+        System.out.println(msg);
     }
 
 }
