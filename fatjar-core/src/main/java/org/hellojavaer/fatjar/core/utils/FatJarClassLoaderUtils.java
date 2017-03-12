@@ -23,6 +23,8 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.CodeSource;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -31,6 +33,8 @@ import java.security.CodeSource;
 public class FatJarClassLoaderUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(FatJarClassLoaderUtils.class);
+
+    private static final Map<ClassLoader, FatJarClassLoader> classLoaderMap = new HashMap<>();
 
     public static FatJarClassLoader injectFatJarClassLoader() {
         return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
@@ -46,17 +50,24 @@ public class FatJarClassLoaderUtils {
         return injectFatJarClassLoader(targetClassLoader, urls, false);
     }
 
-    public static FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] jatJarClassPaths,boolean delegateLoad) {
-        try {
-            ClassLoader parent = targetClassLoader.getParent();
-            FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jatJarClassPaths, parent, delegateLoad);
-            Class clazz = ClassLoader.class;
-            Field nameField = clazz.getDeclaredField("parent");
-            nameField.setAccessible(true);
-            nameField.set(targetClassLoader, fatJarClassLoader);
+    public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
+                                                                         URL[] jatJarClassPaths, boolean delegateLoad) {
+        FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
+        if (fatJarClassLoader != null) {
             return fatJarClassLoader;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } else {
+            try {
+                ClassLoader parent = targetClassLoader.getParent();
+                fatJarClassLoader = new FatJarClassLoader(jatJarClassPaths, parent, delegateLoad);
+                Class clazz = ClassLoader.class;
+                Field nameField = clazz.getDeclaredField("parent");
+                nameField.setAccessible(true);
+                nameField.set(targetClassLoader, fatJarClassLoader);
+                //TODO: log
+                return fatJarClassLoader;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
