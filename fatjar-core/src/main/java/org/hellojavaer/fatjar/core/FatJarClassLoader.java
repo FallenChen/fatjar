@@ -21,6 +21,7 @@ import java.net.URLClassLoader;
 import java.security.CodeSource;
 import java.security.cert.Certificate;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -36,22 +37,24 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
-    private static final String        CLASSS_SUBFIX     = ".class";
-    private static final String        SEPARATOR         = "!/";
+    private static final String                     CLASSS_SUBFIX     = ".class";
+    private static final String                     SEPARATOR         = "!/";
 
-    private boolean                    delegate          = false;
+    private boolean                                 delegate          = false;
 
-    private JarFile                    currentJar;
-    private List<JarFile>              dependencyJars    = new ArrayList<>();
+    private JarFile                                 currentJar;
+    private List<JarFile>                           dependencyJars    = new ArrayList<>();
 
-    private List<FatJarClassLoader>    subClassLoaders   = new ArrayList<>();
+    private List<FatJarClassLoader>                 subClassLoaders   = new ArrayList<>();
 
-    private Map<String, ResourceEntry> loadedResources   = new HashMap<>();
-    private Set<String>                notFoundResources = new HashSet<>();
+    private Map<String, ResourceEntry>              loadedResources   = new HashMap<>();
+    private Set<String>                             notFoundResources = new HashSet<>();
 
-    private String                     pathPrefix        = "";
+    private String                                  pathPrefix        = "";
 
-    private static ClassLoader         j2seClassLoader;
+    private static ClassLoader                      j2seClassLoader;
+
+    private final ConcurrentHashMap<String, Object> lockMap           = new ConcurrentHashMap<>();
 
     static {
         ClassLoader cl = String.class.getClassLoader();
@@ -194,33 +197,20 @@ public class FatJarClassLoader extends URLClassLoader {
     @Override
     public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         Class<?> clazz = null;
-        // 0. find in local cache
-        ResourceEntry resource = loadedResources.get(name);
-        if (resource != null) {
-            clazz = resource.getClazz();
-            if (resolve) {
-                resolveClass(clazz);
-            }
-            return clazz;
-        }
-
-        // 1. load by j2se
-        try {
-            clazz = j2seClassLoader.loadClass(name);
-            if (clazz != null) {
+        synchronized (getLock(name)) {
+            // 0. find in local cache
+            ResourceEntry resource = loadedResources.get(name);
+            if (resource != null) {
+                clazz = resource.getClazz();
                 if (resolve) {
                     resolveClass(clazz);
                 }
                 return clazz;
             }
-        } catch (ClassNotFoundException e) {
-            // ignore;
-        }
 
-        // 2. parent delegate
-        if (delegate) {
+            // 1. load by j2se
             try {
-                clazz = Class.forName(name, false, getParent());
+                clazz = j2seClassLoader.loadClass(name);
                 if (clazz != null) {
                     if (resolve) {
                         resolveClass(clazz);
@@ -228,45 +218,27 @@ public class FatJarClassLoader extends URLClassLoader {
                     return clazz;
                 }
             } catch (ClassNotFoundException e) {
-                // ignore
+                // ignore;
             }
-        }
 
-        // 3.0 load from local resources
-        try {
-            clazz = findClassInternal(name);
-            if (clazz != null) {
-                if (resolve) {
-                    resolveClass(clazz);
-                }
-                return clazz;
-            }
-        } catch (ClassNotFoundException e) {
-            // ignore
-        }
-        // 3.1 load by sub-classload which will recursive find in fat-jar
-        if (subClassLoaders != null) {
-            for (FatJarClassLoader fatJarClassLoader : subClassLoaders) {
-                if (fatJarClassLoader.containsClass(name)) {
-                    try {
-                        clazz = Class.forName(name, false, fatJarClassLoader);
-                        if (clazz != null) {
-                            if (resolve) {
-                                resolveClass(clazz);
-                            }
-                            return clazz;
+            // 2. parent delegate
+            if (delegate) {
+                try {
+                    clazz = Class.forName(name, false, getParent());
+                    if (clazz != null) {
+                        if (resolve) {
+                            resolveClass(clazz);
                         }
-                    } catch (ClassNotFoundException e) {
-                        // ignore
+                        return clazz;
                     }
+                } catch (ClassNotFoundException e) {
+                    // ignore
                 }
             }
-        }
 
-        // 4.
-        if (!delegate) {
+            // 3.0 load from local resources
             try {
-                clazz = Class.forName(name, false, getParent());
+                clazz = findClassInternal(name);
                 if (clazz != null) {
                     if (resolve) {
                         resolveClass(clazz);
@@ -276,85 +248,122 @@ public class FatJarClassLoader extends URLClassLoader {
             } catch (ClassNotFoundException e) {
                 // ignore
             }
+            // 3.1 load by sub-classload which will recursive find in fat-jar
+            if (subClassLoaders != null) {
+                for (FatJarClassLoader fatJarClassLoader : subClassLoaders) {
+                    if (fatJarClassLoader.containsClass(name)) {
+                        try {
+                            clazz = Class.forName(name, false, fatJarClassLoader);
+                            if (clazz != null) {
+                                if (resolve) {
+                                    resolveClass(clazz);
+                                }
+                                return clazz;
+                            }
+                        } catch (ClassNotFoundException e) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+
+            // 4.
+            if (!delegate) {
+                try {
+                    clazz = Class.forName(name, false, getParent());
+                    if (clazz != null) {
+                        if (resolve) {
+                            resolveClass(clazz);
+                        }
+                        return clazz;
+                    }
+                } catch (ClassNotFoundException e) {
+                    // ignore
+                }
+            }
+            return null;
         }
-        return null;
     }
 
     //
     @Override
-    public URL getResource(String name) {
-        // 0. find in local cache
-        ResourceEntry resource = loadedResources.get(name);
-        if (resource != null) {
-            return resource.getUrl();
-        }
+    public synchronized URL getResource(String name) {
+        synchronized (getLock(name)) {
+            // 0. find in local cache
+            ResourceEntry resource = loadedResources.get(name);
+            if (resource != null) {
+                return resource.getUrl();
+            }
 
-        // 1. load by j2se
-        URL url = j2seClassLoader.getResource(name);
-        if (url != null) {
-            return url;
-        }
-
-        // 2. parent delegate
-        if (delegate) {
-            url = getParent().getResource(name);
+            // 1. load by j2se
+            URL url = j2seClassLoader.getResource(name);
             if (url != null) {
                 return url;
             }
-        }
 
-        // 3.
-        ResourceEntry resourceEntry = findResourceInternal(name, name);
-        if (resourceEntry != null) {
-            return resourceEntry.getUrl();
-        }
-
-        // 4.
-        if (delegate) {
-            url = getParent().getResource(name);
-            if (url != null) {
-                return url;
+            // 2. parent delegate
+            if (delegate) {
+                url = getParent().getResource(name);
+                if (url != null) {
+                    return url;
+                }
             }
+
+            // 3.
+            ResourceEntry resourceEntry = findResourceInternal(name, name);
+            if (resourceEntry != null) {
+                return resourceEntry.getUrl();
+            }
+
+            // 4.
+            if (delegate) {
+                url = getParent().getResource(name);
+                if (url != null) {
+                    return url;
+                }
+            }
+            return null;
         }
-        return null;
     }
 
     @Override
-    public InputStream getResourceAsStream(String name) {
-        // 0. find in local cache
-        ResourceEntry resource = loadedResources.get(name);
-        if (resource != null) {
-            return new ByteArrayInputStream(resource.getBytes());
-        }
+    public synchronized InputStream getResourceAsStream(String name) {
+        synchronized (getLock(name)) {
+            // 0. find in local cache
+            ResourceEntry resource = loadedResources.get(name);
+            if (resource != null) {
+                return new ByteArrayInputStream(resource.getBytes());
+            }
 
-        // 1. load by j2se
-        InputStream inputStream = j2seClassLoader.getResourceAsStream(name);
-        if (inputStream != null) {
-            return inputStream;
-        }
-
-        // 2. parent delegate
-        if (delegate) {
-            inputStream = getParent().getResourceAsStream(name);
+            // 1. load by j2se
+            InputStream inputStream = j2seClassLoader.getResourceAsStream(name);
             if (inputStream != null) {
                 return inputStream;
             }
-        }
 
-        // 3.
-        ResourceEntry resourceEntry = findResourceInternal(name, name);
-        if (resourceEntry != null) {
-            return new ByteArrayInputStream(resource.getBytes());
-        }
-
-        // 4.
-        if (delegate) {
-            inputStream = getParent().getResourceAsStream(name);
-            if (inputStream != null) {
-                return inputStream;
+            // 2. parent delegate
+            if (delegate) {
+                inputStream = getParent().getResourceAsStream(name);
+                if (inputStream != null) {
+                    return inputStream;
+                }
             }
+
+            // 3.
+            ResourceEntry resourceEntry = findResourceInternal(name, name);
+            if (resourceEntry != null) {
+                return new ByteArrayInputStream(resource.getBytes());
+            }
+
+            // 4.
+            if (delegate) {
+                inputStream = getParent().getResourceAsStream(name);
+                if (inputStream != null) {
+                    return inputStream;
+                }
+            }
+            return null;
         }
-        return null;
     }
 
     @Override
@@ -362,7 +371,25 @@ public class FatJarClassLoader extends URLClassLoader {
         return findClassInternal(name);
     }
 
-    protected Class<?> findClassInternal(String name) throws ClassNotFoundException {
+    // get from local
+    @Override
+    public synchronized URL findResource(String name) {
+        synchronized (getLock(name)) {
+            ResourceEntry resource = findResourceInternal(name, name);
+            return resource.getUrl();
+        }
+    }
+
+    protected boolean containsClass(String name) {
+        String path = name.replace('.', '/') + CLASSS_SUBFIX;
+        if (currentJar != null && currentJar.getJarEntry(path) != null) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    protected synchronized Class<?> findClassInternal(String name) throws ClassNotFoundException {
         ResourceEntry resource = loadedResources.get(name);
         if (resource != null) {
             return resource.getClazz();
@@ -462,20 +489,14 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    protected boolean containsClass(String name) {
-        String path = name.replace('.', '/') + CLASSS_SUBFIX;
-        if (currentJar != null && currentJar.getJarEntry(path) != null) {
-            return true;
+    private Object getLock(String className) {
+        Object newLock = new Object();
+        Object lock = lockMap.putIfAbsent(className, newLock);
+        if (lock == null) {
+            return newLock;
         } else {
-            return false;
+            return lock;
         }
-    }
-
-    // get from local
-    @Override
-    public URL findResource(String name) {
-        ResourceEntry resource = findResourceInternal(name, name);
-        return resource.getUrl();
     }
 
     private class ResourceEntry {
