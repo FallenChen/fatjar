@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hellojavaer.fatjar.core.boot.jee;
+package org.hellojavaer.fatjar.core.boot;
 
-import org.hellojavaer.fatjar.core.utils.FatJarClassLoaderUtils;
+import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -29,6 +29,7 @@ public class FatJarServletContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         FatJarClassLoaderUtils.injectFatJarClassLoader();
+        FatJarClassLoaderUtils.registerUrlProtocolHandler();
     }
 
     @Override
