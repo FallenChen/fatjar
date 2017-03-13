@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hellojavaer.fatjar.core.boot.jar;
+package org.hellojavaer.fatjar.core.boot;
 
 import org.hellojavaer.fatjar.core.FatJarClassLoader;
+import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,14 +32,15 @@ import java.util.jar.Manifest;
  *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 11/03/2017.
  */
-public class FatJarClassLoaderLauncher {
+public class Main {
 
     private static String START_CLASS_KEY = "Start-Class";
 
     public static void main(String[] args) throws ClassNotFoundException, IllegalAccessException,
                                           InstantiationException, NoSuchMethodException, InvocationTargetException,
                                           IOException {
-        URL url = getClassLocation(FatJarClassLoaderLauncher.class);
+        FatJarClassLoaderUtils.registerUrlProtocolHandler();
+        URL url = getClassLocation(Main.class);
         File fatJarFile = new File(url.getPath());
         JarFile jar = new JarFile(fatJarFile);
         Manifest manifest = jar.getManifest();

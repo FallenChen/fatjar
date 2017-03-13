@@ -15,9 +15,13 @@
  */
 package org.hellojavaer.fatjar.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLStreamHandlerFactory;
 import java.security.CodeSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +33,8 @@ import java.util.Map;
 public class FatJarClassLoaderUtils {
 
     private static final Map<ClassLoader, FatJarClassLoader> classLoaderMap       = new HashMap<>();
+
+    private static Logger                                    logger               = LoggerFactory.getLogger(FatJarClassLoaderUtils.class);
 
     private static boolean                                   registeredURLHandler = false;
 
@@ -43,30 +49,61 @@ public class FatJarClassLoaderUtils {
         } else {
             urls = new URL[] { getClassLocation(FatJarClassLoaderUtils.class) };
         }
-        return injectFatJarClassLoader(targetClassLoader, urls, false);
+        Boolean delegate = FatJarSystemConfig.isLoadDelegate();
+        if (delegate == null) {
+            delegate = false;
+        }
+        return injectFatJarClassLoader(targetClassLoader, urls, delegate);
     }
 
     public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
-                                                                         URL[] fatJarClassPaths, boolean delegateLoad) {
+                                                                         URL[] fatJarClassPaths, boolean delegate) {
         FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
         if (fatJarClassLoader != null) {
             return fatJarClassLoader;
         } else {
             try {
+                logger.info(new StringBuilder(
+                                              "[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader targetClassLoader:{class:")//
+                .append(targetClassLoader.getClass())//
+                .append("},fatJarClassLoader:{delegateLoad:").append(delegate)//
+                .append("} ]")//
+                .toString());
                 ClassLoader parent = targetClassLoader.getParent();
-                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, delegateLoad);
+                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, targetClassLoader, delegate);
                 Class clazz = ClassLoader.class;
                 Field nameField = clazz.getDeclaredField("parent");
                 nameField.setAccessible(true);
                 nameField.set(targetClassLoader, fatJarClassLoader);
-                info(new StringBuilder("[ FatJarClassLoaderUtils.injectFatJarClassLoader targetClassLoader:{class:")//
-                .append(targetClassLoader.getClass())//
-                .append("},fatJarClassLoader:{delegateLoad:").append(delegateLoad)//
-                .append("} ]")//
-                .toString());
                 return fatJarClassLoader;
             } catch (Exception e) {
                 throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static void registerUrlProtocolHandler() {
+
+        if (!registeredURLHandler) {
+            synchronized (FatJarClassLoaderUtils.class) {
+                if (!registeredURLHandler) {
+                    try {
+                        URL.setURLStreamHandlerFactory(new FarJarURLStreamHandlerFactory());
+                    } catch (final Error e) {
+                        try {
+                            Field factoryField = URL.class.getDeclaredField("factory");
+                            factoryField.setAccessible(true);
+                            URLStreamHandlerFactory old = (URLStreamHandlerFactory) factoryField.get(null);
+                            factoryField.set(null, new FarJarURLStreamHandlerFactory(old));
+                        } catch (NoSuchFieldException e0) {
+                            throw new Error("Could not access factory field on URL class", e0);
+                        } catch (IllegalAccessException e1) {
+                            throw new Error("Could not access factory field on URL class", e1);
+                        }
+                    }
+                    logger.info("[FarJar] FatJarClassLoaderUtils.registerUrlProtocolHandler success");
+                    registeredURLHandler = true;
+                }
             }
         }
     }
@@ -92,10 +129,6 @@ public class FatJarClassLoaderUtils {
         } else {
             return null;
         }
-    }
-
-    private static void info(String msg) {
-        System.out.println(msg);
     }
 
 }
