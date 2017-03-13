@@ -94,17 +94,27 @@ class FatJarTempFileManager {
                     createdTempDir.mkdirs();
                 }
             }
-            file = new File(createdTempDir, URLEncoder.encode(key, "UTF-8"));
-            if (!file.exists()) {
-                file.createNewFile();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("[FarJar] + {} | create a new temp file[{}] in {}", key, file.getName(),
-                                 file.getAbsolutePath());
-                }
-            }
             //
             printTempFileLocation(createdTempDir);
             //
+            String encodeFileName = URLEncoder.encode(key, "UTF-8");
+            file = new File(createdTempDir, encodeFileName);
+            if (file.exists()) {
+                if (encodeFileName.toLowerCase().endsWith("-snapshot.jar")) {
+                    file.delete();
+                    file.createNewFile();
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("[FarJar] + {} | created a new temp file[{}] in {}", key, file.getName(),
+                                     file.getAbsolutePath());
+                    }
+                }
+            } else {
+                file.createNewFile();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("[FarJar] + {} | created a new temp file[{}] in {}", key, file.getName(),
+                                 file.getAbsolutePath());
+                }
+            }
             FileOutputStream tempOut = new FileOutputStream(file);
             int n;
             byte[] buffer = new byte[1024];
