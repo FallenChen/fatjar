@@ -22,9 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.net.URLEncoder;
-import java.security.CodeSource;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarFile;
@@ -35,7 +33,7 @@ import java.util.jar.JarFile;
  */
 class FatJarTempFileManager {
 
-    private static final String                            FATJAR_TEMP_FILE_PATH = "/.fatjar/temp/";
+    private static final String                            FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
     private static Logger                                  logger                = LoggerFactory.getLogger(FatJarTempFileManager.class);
     private static String                                  tempDir;
     private static File                                    createdTempDir;
@@ -82,8 +80,8 @@ class FatJarTempFileManager {
             if (createdTempDir == null) {
                 String actPath = tempDir;
                 if (tempDir == null) {
-                    String temp = getClassLocation(FatJarTempFileManager.class).getPath();
-                    actPath = temp.substring(0, temp.lastIndexOf("/")) + FATJAR_TEMP_FILE_PATH;
+                    actPath = FatJarClassLoaderUtils.getBaseDirectry(FatJarTempFileManager.class).getPath()
+                              + FATJAR_TEMP_FILE_PATH;
                 }
                 createdTempDir = new File(actPath);
                 if (!createdTempDir.exists()) {
@@ -153,29 +151,6 @@ class FatJarTempFileManager {
             return newLock;
         } else {
             return lock;
-        }
-    }
-
-    private static URL getClassLocation(Class clazz) {
-        if (clazz == null) {
-            return null;
-        }
-        String classPath = clazz.getName().replace('.', '/') + ".class";
-        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
-        if (codeSource != null) {
-            URL locationURL = codeSource.getLocation();
-            String location = locationURL.getPath();
-            if (location.endsWith(classPath)) {
-                try {
-                    return new URL(location.substring(0, location.length() - classPath.length()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                return locationURL;
-            }
-        } else {
-            return null;
         }
     }
 

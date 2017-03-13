@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLStreamHandlerFactory;
@@ -47,7 +48,7 @@ public class FatJarClassLoaderUtils {
         if (targetClassLoader instanceof URLClassLoader) {
             urls = ((URLClassLoader) targetClassLoader).getURLs();
         } else {
-            urls = new URL[] { getClassLocation(FatJarClassLoaderUtils.class) };
+            urls = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
         }
         Boolean delegate = FatJarSystemConfig.isLoadDelegate();
         if (delegate == null) {
@@ -108,7 +109,7 @@ public class FatJarClassLoaderUtils {
         }
     }
 
-    private static URL getClassLocation(Class clazz) {
+    public static URL getBasePath(Class clazz) {
         if (clazz == null) {
             return null;
         }
@@ -116,7 +117,7 @@ public class FatJarClassLoaderUtils {
         CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
         if (codeSource != null) {
             URL locationURL = codeSource.getLocation();
-            String location = locationURL.getPath();
+            String location = locationURL.toString();
             if (location.endsWith(classPath)) {
                 try {
                     return new URL(location.substring(0, location.length() - classPath.length()));
@@ -125,6 +126,46 @@ public class FatJarClassLoaderUtils {
                 }
             } else {
                 return locationURL;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    public static URL getBaseDirectry(Class clazz) {
+        if (clazz == null) {
+            return null;
+        }
+        String classPath = clazz.getName().replace('.', '/') + ".class";
+        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
+        if (codeSource != null) {
+            URL locationURL = codeSource.getLocation();
+            String location = locationURL.toString();
+            int i = location.indexOf("!/");
+            if (i == -1) {
+                if (location.endsWith(classPath)) {
+                    try {
+                        return new URL(location.substring(0, location.length() - classPath.length()));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    if (location.endsWith(".jar")) {
+                        try {
+                            return new URL(location.substring(0, location.lastIndexOf("/")));
+                        } catch (MalformedURLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        return locationURL;
+                    }
+                }
+            } else {
+                try {
+                    return new URL(location.substring(0, location.lastIndexOf("/", i - 1)));
+                } catch (MalformedURLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         } else {
             return null;

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.security.CodeSource;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -40,7 +39,7 @@ public class Main {
                                           InstantiationException, NoSuchMethodException, InvocationTargetException,
                                           IOException {
         FatJarClassLoaderUtils.registerUrlProtocolHandler();
-        URL url = getClassLocation(Main.class);
+        URL url = FatJarClassLoaderUtils.getBasePath(Main.class);
         File fatJarFile = new File(url.getPath());
         JarFile jar = new JarFile(fatJarFile);
         Manifest manifest = jar.getManifest();
@@ -54,29 +53,6 @@ public class Main {
         Object instance = mainClazz.newInstance();
         Method mainMethod = mainClazz.getMethod("main", String[].class);
         mainMethod.invoke(instance, args);
-    }
-
-    private static URL getClassLocation(Class clazz) {
-        if (clazz == null) {
-            return null;
-        }
-        String classPath = clazz.getName().replace('.', '/') + ".class";
-        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
-        if (codeSource != null) {
-            URL locationURL = codeSource.getLocation();
-            String location = locationURL.getPath();
-            if (location.endsWith(classPath)) {
-                try {
-                    return new URL(location.substring(0, location.length() - classPath.length()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                return locationURL;
-            }
-        } else {
-            return null;
-        }
     }
 
 }
