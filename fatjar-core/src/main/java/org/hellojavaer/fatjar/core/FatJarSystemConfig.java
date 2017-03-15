@@ -21,11 +21,23 @@ package org.hellojavaer.fatjar.core;
  */
 class FatJarSystemConfig {
 
-    private static final String DELEGATE_KEY      = "fatjar.load.delegate";
-    private static String       TEMP_FILE_DIR_KEY = "fatjar.temp.dir";
+    private static final String DELEGATE_KEY        = "fatjar.load.delegate";
+    private static final String NESTED_DELEGATE_KEY = "fatjar.load.nested.delegate";
+    private static String       TEMP_FILE_DIR_KEY   = "fatjar.temp.dir";
 
-    public static Boolean isLoadDelegate() {
+    public static Boolean loadDelegate() {
         String val = get(DELEGATE_KEY);
+        if ("true".equals(val)) {
+            return Boolean.TRUE;
+        } else if ("false".equals(val)) {
+            return Boolean.FALSE;
+        } else {
+            return null;
+        }
+    }
+
+    public static Boolean nestedLoadDelegate() {
+        String val = get(NESTED_DELEGATE_KEY);
         if ("true".equals(val)) {
             return Boolean.TRUE;
         } else if ("false".equals(val)) {
