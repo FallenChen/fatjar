@@ -44,22 +44,22 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
-    private static Logger                   logger                     = LoggerFactory.getLogger(FatJarClassLoader.class);
+    private static Logger                 logger                   = LoggerFactory.getLogger(FatJarClassLoader.class);
 
-    private static ClassLoader              j2seClassLoader            = null;
-    private static SecurityManager          securityManager            = null;
-    private static Method                   FIND_CLASS_METHOD          = null;
-    private static Method                   FIND_RESOURCE_METHOD       = null;
+    private static ClassLoader            j2seClassLoader          = null;
+    private static SecurityManager        securityManager          = null;
+    private static Method                 FIND_CLASS_METHOD        = null;
+    private static Method                 FIND_RESOURCE_METHOD     = null;
 
-    private ClassLoader                     child                      = null;
+    private ClassLoader                   child                    = null;
 
-    static final boolean                    DEFAULT_DELEGATE           = true;
-    static final boolean                    DEFAULT_NESTED_DELEGATE    = true;
+    static final boolean                  DEFAULT_DELEGATE         = true;
+    static final boolean                  DEFAULT_NESTED_DELEGATE  = true;
 
-    private boolean                         delegate                   = DEFAULT_DELEGATE;
-    private boolean                         nestedDelegate             = DEFAULT_NESTED_DELEGATE;
+    private boolean                       delegate                 = DEFAULT_DELEGATE;
+    private boolean                       nestedDelegate           = DEFAULT_NESTED_DELEGATE;
 
-    private List<InternalFatJarClassLoader> internalFatJarClassLoaders = new ArrayList<>();
+    private List<NestedFatJarClassLoader> nestedFatJarClassLoaders = new ArrayList<>();
 
     static {
         //
@@ -159,9 +159,8 @@ public class FatJarClassLoader extends URLClassLoader {
                     Manifest manifest = jar.getManifest();
                     if (isFatJar(manifest)) {
                         URL filePath = jarFile.getCanonicalFile().toURI().toURL();
-                        internalFatJarClassLoaders.add(new InternalFatJarClassLoader(jar, getParent(), child,
-                                                                                     nestedDelegate,
-                                                                                     filePath.toString()));
+                        nestedFatJarClassLoaders.add(new NestedFatJarClassLoader(jar, getParent(), child,
+                                                                                 nestedDelegate, filePath.toString()));
                     }
                 } catch (IOException e) {
                     logger.error(e.getMessage(), e);
@@ -216,9 +215,9 @@ public class FatJarClassLoader extends URLClassLoader {
 
     @Override
     public URL findResource(String name) {
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                URL url = internalFatJarClassLoader.findResource(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                URL url = nestedFatJarClassLoader.findResource(name);
                 if (url != null) {
                     return url;
                 }
@@ -230,9 +229,9 @@ public class FatJarClassLoader extends URLClassLoader {
     @Override
     public Enumeration<URL> findResources(String name) throws IOException {
         LinkedHashSet<URL> result = new LinkedHashSet<URL>();
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                Enumeration<URL> enumeration = internalFatJarClassLoader.findResources(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                Enumeration<URL> enumeration = nestedFatJarClassLoader.findResources(name);
                 if (enumeration != null) {
                     while (enumeration.hasMoreElements()) {
                         result.add(enumeration.nextElement());
@@ -245,9 +244,9 @@ public class FatJarClassLoader extends URLClassLoader {
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                Class<?> clazz = internalFatJarClassLoader.findClass(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                Class<?> clazz = nestedFatJarClassLoader.findClass(name);
                 if (clazz != null) {
                     return clazz;
                 }
@@ -279,10 +278,10 @@ public class FatJarClassLoader extends URLClassLoader {
             }
         }
         // 2.
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsClass(name)) {
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsClass(name)) {
                 try {
-                    clazz = Class.forName(name, false, internalFatJarClassLoader);
+                    clazz = Class.forName(name, false, nestedFatJarClassLoader);
                     if (clazz != null) {
                         if (resolve) {
                             resolveClass(clazz);
@@ -320,9 +319,9 @@ public class FatJarClassLoader extends URLClassLoader {
                 return url;
             }
         }
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                URL url = internalFatJarClassLoader.getResource(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                URL url = nestedFatJarClassLoader.getResource(name);
                 if (url != null) {
                     return url;
                 }
@@ -348,9 +347,9 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
             }
         }
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                Enumeration<URL> enumeration = internalFatJarClassLoader.findResources(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                Enumeration<URL> enumeration = nestedFatJarClassLoader.findResources(name);
                 if (enumeration != null) {
                     while (enumeration.hasMoreElements()) {
                         result.add(enumeration.nextElement());
@@ -377,9 +376,9 @@ public class FatJarClassLoader extends URLClassLoader {
                 return inputStream;
             }
         }
-        for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
-            if (internalFatJarClassLoader.containsResource(name)) {
-                InputStream inputStream = internalFatJarClassLoader.getResourceAsStream(name);
+        for (NestedFatJarClassLoader nestedFatJarClassLoader : nestedFatJarClassLoaders) {
+            if (nestedFatJarClassLoader.containsResource(name)) {
+                InputStream inputStream = nestedFatJarClassLoader.getResourceAsStream(name);
                 if (inputStream != null) {
                     return inputStream;
                 }
@@ -400,7 +399,7 @@ public class FatJarClassLoader extends URLClassLoader {
         initOneURL(url);
     }
 
-    class InternalFatJarClassLoader extends URLClassLoader {
+    class NestedFatJarClassLoader extends URLClassLoader {
 
         private static final String               JAR_PROTOCOL      = "jar:";
         private static final String               CLASSS_SUBFIX     = ".class";
@@ -411,7 +410,7 @@ public class FatJarClassLoader extends URLClassLoader {
         private JarFile                           fatJar;
         private Map<String, JarFile>              dependencyJars    = new LinkedHashMap<>();
 
-        private List<InternalFatJarClassLoader>   subClassLoaders   = new ArrayList<>();
+        private List<NestedFatJarClassLoader>     subClassLoaders   = new ArrayList<>();
 
         private Map<String, ResourceEntry>        loadedResources   = new HashMap<>();
         private Set<String>                       notFoundResources = new HashSet<>();
@@ -422,8 +421,8 @@ public class FatJarClassLoader extends URLClassLoader {
 
         private URL                               fatJarURL;
 
-        private InternalFatJarClassLoader(JarFile fatJar, ClassLoader parent, ClassLoader child, boolean delegate,
-                                          String basePath) {
+        private NestedFatJarClassLoader(JarFile fatJar, ClassLoader parent, ClassLoader child, boolean delegate,
+                                        String basePath) {
             super(new URL[0], parent);
             this.fatJar = fatJar;
             this.basePath = basePath;
@@ -445,8 +444,8 @@ public class FatJarClassLoader extends URLClassLoader {
                                                                                     inputStream);
                             Manifest manifest = subJarFile.getManifest();
                             if (isFatJar(manifest)) {
-                                subClassLoaders.add(new InternalFatJarClassLoader(subJarFile, parent, child, delegate,
-                                                                                  nextPrefix));
+                                subClassLoaders.add(new NestedFatJarClassLoader(subJarFile, parent, child, delegate,
+                                                                                nextPrefix));
                             } else {
                                 dependencyJars.put(jarEntry.getName(), subJarFile);
                             }
@@ -531,7 +530,7 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
                 // 2.1 load by sub-classload which will recursive find in fat-jar
                 if (subClassLoaders != null) {
-                    for (InternalFatJarClassLoader fatJarClassLoader : subClassLoaders) {
+                    for (NestedFatJarClassLoader fatJarClassLoader : subClassLoaders) {
                         if (fatJarClassLoader.containsClass(name)) {
                             try {
                                 clazz = Class.forName(name, false, fatJarClassLoader);
