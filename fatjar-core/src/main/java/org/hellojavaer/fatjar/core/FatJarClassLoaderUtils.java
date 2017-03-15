@@ -50,7 +50,7 @@ public class FatJarClassLoaderUtils {
         } else {
             urls = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
         }
-        Boolean delegate = FatJarSystemConfig.isLoadDelegate();
+        Boolean delegate = FatJarSystemConfig.loadDelegate();
         if (delegate == null) {
             delegate = false;
         }
@@ -59,6 +59,7 @@ public class FatJarClassLoaderUtils {
 
     public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
                                                                          URL[] fatJarClassPaths, boolean delegate) {
+
         FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
         if (fatJarClassLoader != null) {
             return fatJarClassLoader;
@@ -71,6 +72,7 @@ public class FatJarClassLoaderUtils {
                 .append("} ]")//
                 .toString());
                 ClassLoader parent = targetClassLoader.getParent();
+
                 fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, targetClassLoader, delegate);
                 Class clazz = ClassLoader.class;
                 Field nameField = clazz.getDeclaredField("parent");
