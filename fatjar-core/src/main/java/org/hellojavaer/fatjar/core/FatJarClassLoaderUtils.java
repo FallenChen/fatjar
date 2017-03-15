@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -52,28 +53,71 @@ public class FatJarClassLoaderUtils {
         }
         Boolean delegate = FatJarSystemConfig.loadDelegate();
         if (delegate == null) {
-            delegate = false;
+            delegate = FatJarClassLoader.DEFAULT_DELEGATE;
         }
         return injectFatJarClassLoader(targetClassLoader, urls, delegate);
     }
 
+    public static FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] fatJarClassPaths,
+                                                            boolean delegate) {
+        Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
+        if (nestedDelegate == null) {
+            nestedDelegate = FatJarClassLoader.DEFAULT_NESTED_DELEGATE;
+        }
+        //
+        Boolean childDelegate = getDelegateOfChildClassLoader(targetClassLoader);
+        if (childDelegate != null) {
+            nestedDelegate = childDelegate;
+            if (logger.isInfoEnabled()) {
+                logger.info("[FatJar] get nestedDelegate:{} from {}", nestedDelegate,
+                            targetClassLoader.getClass());
+            }
+        }
+        //
+        return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, delegate, nestedDelegate);
+    }
+
+    private static Boolean getDelegateOfChildClassLoader(ClassLoader child) {
+        if (child == null) {
+            return null;
+        }
+        Class clazz = child.getClass();
+        try {
+            Field field = clazz.getDeclaredField("delegate");
+            if (field != null) {
+                field.setAccessible(true);
+                return field.getBoolean(child);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        try {
+            Method method = clazz.getDeclaredMethod("isDelegate");
+            method.setAccessible(true);
+            return (Boolean) method.invoke(child);
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
+    }
+
     public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
-                                                                         URL[] fatJarClassPaths, boolean delegate) {
+                                                                         URL[] fatJarClassPaths, boolean delegate,
+                                                                         boolean nestedDelegate) {
 
         FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
         if (fatJarClassLoader != null) {
             return fatJarClassLoader;
         } else {
             try {
-                logger.info(new StringBuilder(
-                                              "[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader targetClassLoader:{class:")//
-                .append(targetClassLoader.getClass())//
-                .append("},fatJarClassLoader:{delegateLoad:").append(delegate)//
-                .append("} ]")//
-                .toString());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader targetClassLoader:{class:{},fatJarClassLoader:{delegate:{},nestedDelegate:{}} ]",
+                                targetClassLoader.getClass(), delegate, nestedDelegate);
+                }
                 ClassLoader parent = targetClassLoader.getParent();
 
-                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, targetClassLoader, delegate);
+                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, targetClassLoader, delegate,
+                                                          nestedDelegate);
                 Class clazz = ClassLoader.class;
                 Field nameField = clazz.getDeclaredField("parent");
                 nameField.setAccessible(true);
@@ -104,7 +148,9 @@ public class FatJarClassLoaderUtils {
                             throw new Error("Could not access factory field on URL class", e1);
                         }
                     }
-                    logger.info("[FarJar] FatJarClassLoaderUtils.registerUrlProtocolHandler success");
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[FarJar] FatJarClassLoaderUtils.registerUrlProtocolHandler success");
+                    }
                     registeredURLHandler = true;
                 }
             }

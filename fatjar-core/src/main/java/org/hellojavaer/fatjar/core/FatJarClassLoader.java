@@ -53,8 +53,11 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private ClassLoader                     child                      = null;
 
-    private boolean                         delegate                   = true;
-    private boolean                         nestedDelegate             = true;
+    static final boolean                    DEFAULT_DELEGATE           = true;
+    static final boolean                    DEFAULT_NESTED_DELEGATE    = true;
+
+    private boolean                         delegate                   = DEFAULT_DELEGATE;
+    private boolean                         nestedDelegate             = DEFAULT_NESTED_DELEGATE;
 
     private List<InternalFatJarClassLoader> internalFatJarClassLoaders = new ArrayList<>();
 
