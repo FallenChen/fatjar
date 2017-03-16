@@ -26,10 +26,14 @@ import javax.servlet.ServletContextListener;
  */
 public class FatJarServletContextListener implements ServletContextListener {
 
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
+    static {
         FatJarClassLoaderUtils.injectFatJarClassLoader();
         FatJarClassLoaderUtils.registerUrlProtocolHandler();
+    }
+
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+
     }
 
     @Override
