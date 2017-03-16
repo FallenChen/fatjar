@@ -204,13 +204,13 @@ public class FatJarClassLoader extends URLClassLoader {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[child:");
-        sb.append(child);
+        sb.append(child == null ? "null" : child.getClass().getName());
         sb.append("]->[");
         sb.append("own:");
         sb.append(super.toString());
         sb.append("]->[");
         sb.append("parent:");
-        sb.append(getParent());
+        sb.append(getParent() == null ? "null" : getParent().getClass().getName());
         sb.append("]");
         return sb.toString();
     }
@@ -569,13 +569,13 @@ public class FatJarClassLoader extends URLClassLoader {
         public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("[child:");
-            sb.append(child);
+            sb.append(child == null ? "null" : child.getClass().getName());
             sb.append("]->[");
             sb.append("own:");
             sb.append(super.toString());
             sb.append("]->[");
             sb.append("parent:");
-            sb.append(getParent());
+            sb.append(getParent() == null ? "null" : getParent().getClass().getName());
             sb.append("]");
             sb.append(",jarFile:");
             sb.append(fatJarURL);
