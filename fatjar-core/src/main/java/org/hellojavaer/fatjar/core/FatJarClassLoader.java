@@ -83,81 +83,6 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private Class<?> invokeFindClass(ClassLoader classLoader, String name) {
-        if (classLoader == null) {
-            return null;
-        }
-        Method method = getMethod(classLoader.getClass(), "findClass", String.class);
-        try {
-            return (Class<?>) method.invoke(classLoader, name);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private URL invokeFindResource(ClassLoader classLoader, String name) {
-        if (classLoader == null) {
-            return null;
-        }
-        Method method = getMethod(classLoader.getClass(), "findResource", String.class);
-        try {
-            return (URL) method.invoke(classLoader, name);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Enumeration<URL> invokeFindResources(ClassLoader classLoader, String name) {
-        if (classLoader == null) {
-            return null;
-        }
-        Method method = getMethod(classLoader.getClass(), "findResources", String.class);
-        try {
-            return (Enumeration<URL>) method.invoke(classLoader, name);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Method getMethod(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
-        if (clazz == null) {
-            return null;
-        }
-        Map<String, Method> methods = methodMap.get(clazz);
-        if (methods == null) {
-            synchronized (methodMap) {
-                methods = methodMap.get(clazz);
-                if (methods == null) {
-                    methods = new HashMap<>();
-                    methodMap.put(clazz, methods);
-                }
-            }
-        }
-        Method method = methods.get(methodName);
-        if (method == null) {
-            synchronized (methods) {
-                method = methods.get(methodName);
-                if (method == null) {
-                    Class<?> clazz0 = clazz.getClass();
-                    while (clazz0 != null) {
-                        Method temp = null;
-                        try {
-                            temp = clazz0.getDeclaredMethod(methodName, parameterTypes);
-                            temp.setAccessible(true);
-                            methods.put(methodName, temp);
-                            method = temp;
-                            break;
-                        } catch (Exception e) {
-                            clazz = clazz.getSuperclass();
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-        return method;
-    }
-
     public FatJarClassLoader(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate, boolean nestedDelegate) {
         super(urls, parent);
         useSystemConfig();
@@ -461,6 +386,89 @@ public class FatJarClassLoader extends URLClassLoader {
         initOneURL(url);
     }
 
+    private Class<?> invokeFindClass(ClassLoader classLoader, String name) {
+        if (classLoader == null) {
+            return null;
+        }
+        Method method = getMethod(classLoader.getClass(), "findClass", String.class);
+        try {
+            return (Class<?>) method.invoke(classLoader, name);
+        } catch (Exception e) {
+            Throwable temp = e;
+            while (temp != null) {
+                if (temp instanceof ClassNotFoundException) {
+                    return null;
+                } else {
+                    temp = temp.getCause();
+                }
+            }
+            throw new RuntimeException(e);
+        }
+    }
+
+    private URL invokeFindResource(ClassLoader classLoader, String name) {
+        if (classLoader == null) {
+            return null;
+        }
+        Method method = getMethod(classLoader.getClass(), "findResource", String.class);
+        try {
+            return (URL) method.invoke(classLoader, name);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Enumeration<URL> invokeFindResources(ClassLoader classLoader, String name) {
+        if (classLoader == null) {
+            return null;
+        }
+        Method method = getMethod(classLoader.getClass(), "findResources", String.class);
+        try {
+            return (Enumeration<URL>) method.invoke(classLoader, name);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Method getMethod(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+        if (clazz == null) {
+            return null;
+        }
+        Map<String, Method> methods = methodMap.get(clazz);
+        if (methods == null) {
+            synchronized (methodMap) {
+                methods = methodMap.get(clazz);
+                if (methods == null) {
+                    methods = new HashMap<>();
+                    methodMap.put(clazz, methods);
+                }
+            }
+        }
+        Method method = methods.get(methodName);
+        if (method == null) {
+            synchronized (methods) {
+                method = methods.get(methodName);
+                if (method == null) {
+                    Class<?> clazz0 = clazz;
+                    while (clazz0 != null) {
+                        Method temp = null;
+                        try {
+                            temp = clazz0.getDeclaredMethod(methodName, parameterTypes);
+                            temp.setAccessible(true);
+                            methods.put(methodName, temp);
+                            method = temp;
+                            break;
+                        } catch (Exception e) {
+                            clazz0 = clazz0.getSuperclass();
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        return method;
+    }
+
     class InternalFatJarClassLoader extends URLClassLoader {
 
         private static final String               JAR_PROTOCOL      = "jar:";
@@ -637,16 +645,12 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
                 // 3.1
                 if (child != null) {
-                    try {
-                        clazz = invokeFindClass(child, name);
-                        if (clazz != null) {
-                            if (resolve) {
-                                resolveClass(clazz);
-                            }
-                            return clazz;
+                    clazz = invokeFindClass(child, name);
+                    if (clazz != null) {
+                        if (resolve) {
+                            resolveClass(clazz);
                         }
-                    } catch (Exception e) {
-                        // ignore
+                        return clazz;
                     }
                 }
                 // 3.2
@@ -708,13 +712,9 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
                 // 3.1
                 if (child != null) {
-                    try {
-                        url = invokeFindResource(child, name);
-                        if (url != null) {
-                            return url;
-                        }
-                    } catch (Exception e) {
-                        // ignore
+                    url = invokeFindResource(child, name);
+                    if (url != null) {
+                        return url;
                     }
                 }
                 // 3.2
@@ -765,15 +765,11 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
                 // 3.1
                 if (child != null) {
-                    try {
-                        Enumeration<URL> enumeration = invokeFindResources(child, name);
-                        if (enumeration != null) {
-                            while (enumeration.hasMoreElements()) {
-                                result.add(enumeration.nextElement());
-                            }
+                    Enumeration<URL> enumeration = invokeFindResources(child, name);
+                    if (enumeration != null) {
+                        while (enumeration.hasMoreElements()) {
+                            result.add(enumeration.nextElement());
                         }
-                    } catch (Exception e) {
-                        // ignore
                     }
                 }
                 // 3.2
@@ -830,16 +826,16 @@ public class FatJarClassLoader extends URLClassLoader {
 
                 // 3.1
                 if (child != null) {
-                    try {
-                        URL url = invokeFindResource(child, name);
-                        if (url != null) {
+                    URL url = invokeFindResource(child, name);
+                    if (url != null) {
+                        try {
                             inputStream = url.openStream();
                             if (inputStream != null) {
                                 return inputStream;
                             }
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                    } catch (Exception e) {
-                        // ignore
                     }
                 }
                 // 3.2 parent delegate

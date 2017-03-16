@@ -132,8 +132,7 @@ public class FatJarClassLoaderUtils {
             return fatJarClassLoader;
         } else {
             try {
-                ClassLoader parent = targetClassLoader.getParent();
-                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, parent, targetClassLoader, delegate,
+                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, targetClassLoader.getParent(), targetClassLoader, delegate,
                                                           nestedDelegate);
                 // replace parent
                 Class<?> clazz = targetClassLoader.getClass();
@@ -150,7 +149,7 @@ public class FatJarClassLoaderUtils {
                 classLoaderMap.put(targetClassLoader, fatJarClassLoader);
                 if (logger.isInfoEnabled()) {
                     logger.info("[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader child:{},parent:{},delegate:{},nestedDelegate:{}} ]",
-                                targetClassLoader.toString(), parent.toString(), delegate, nestedDelegate);
+                                targetClassLoader.toString(), targetClassLoader.toString(), delegate, nestedDelegate);
                 }
                 return fatJarClassLoader;
             } catch (Exception e) {
