@@ -102,15 +102,13 @@ class FatJarTempFileManager {
                     file.delete();
                     file.createNewFile();
                     if (logger.isDebugEnabled()) {
-                        logger.debug("[FarJar] + {} | created a new temp file[{}] in {}", key, file.getName(),
-                                     file.getAbsolutePath());
+                        logger.debug("[FarJar] + {} | created a new temp file in {}", key, file.getAbsolutePath());
                     }
                 }
             } else {
                 file.createNewFile();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("[FarJar] + {} | created a new temp file[{}] in {}", key, file.getName(),
-                                 file.getAbsolutePath());
+                    logger.debug("[FarJar] + {} | created a new temp in {}", key, file.getAbsolutePath());
                 }
             }
             FileOutputStream tempOut = new FileOutputStream(file);
