@@ -201,6 +201,21 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[child:");
+        sb.append(child);
+        sb.append("]->[");
+        sb.append("own:");
+        sb.append(super.toString());
+        sb.append("]->[");
+        sb.append("parent:");
+        sb.append(getParent());
+        sb.append("]");
+        return sb.toString();
+    }
+
+    @Override
     public URL findResource(String name) {
         for (InternalFatJarClassLoader internalFatJarClassLoader : internalFatJarClassLoaders) {
             if (internalFatJarClassLoader.containsResource(name)) {
@@ -548,6 +563,23 @@ public class FatJarClassLoader extends URLClassLoader {
                     }
                 }
             }
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[child:");
+            sb.append(child);
+            sb.append("]->[");
+            sb.append("own:");
+            sb.append(super.toString());
+            sb.append("]->[");
+            sb.append("parent:");
+            sb.append(getParent());
+            sb.append("]");
+            sb.append(",jarFile:");
+            sb.append(fatJarURL);
+            return sb.toString();
         }
 
         @Override
