@@ -16,18 +16,27 @@
 package org.hellojavaer.fatjar.core.boot;
 
 import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
+ *
  *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 17/03/2017.
  */
 public class FatJarBoot {
 
+    private static Logger logger = LoggerFactory.getLogger(FatJarBoot.class);
+
     static {
-        FatJarClassLoaderUtils.boot();
+        logger.info("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
+        FatJarClassLoaderUtils.injectFatJarClassLoader();
+        FatJarClassLoaderUtils.registerUrlProtocolHandler();
+        logger.info("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
     }
 
     public static void run() {
+        //
     }
 
 }

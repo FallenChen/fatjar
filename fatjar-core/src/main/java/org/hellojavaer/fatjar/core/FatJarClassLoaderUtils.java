@@ -40,13 +40,6 @@ public class FatJarClassLoaderUtils {
 
     private static boolean                                   registeredURLHandler = false;
 
-    public static void boot() {
-        logger.info("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
-        injectFatJarClassLoader();
-        registerUrlProtocolHandler();
-        logger.info("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
-    }
-
     public static FatJarClassLoader injectFatJarClassLoader() {
         return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
     }
