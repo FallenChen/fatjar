@@ -52,6 +52,9 @@ public class FatJarMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.dependencies}", required = true, readonly = true)
     private Collection<Dependency> dependencies;
 
+    @Parameter(defaultValue = "${project.dependencyManagement.dependencies}", required = false, readonly = true)
+    private Collection<Dependency> dependencyManagement;
+
     @Parameter(defaultValue = "${project.build.directory}", required = true, readonly = true)
     private File                   targetDirectory;
 
@@ -66,14 +69,17 @@ public class FatJarMojo extends AbstractMojo {
 
     public void execute() throws MojoExecutionException {
         if (artifacts == null || artifacts.isEmpty() || dependencies == null || dependencies.isEmpty()) {
-            throw new MojoExecutionException("Dependency is empty");
+            throw new MojoExecutionException("Dependency can't be empty when building fatjar");
+        }
+        if (dependencyManagement != null && dependencyManagement.size() > 0) {
+            throw new MojoExecutionException("Can't include dependencyManagement when building fatjar");
         }
         if (!libDirectory.endsWith("/")) {
             libDirectory = libDirectory + "/";
         }
         File directDependencyJarFile = null;
-        Map<Artifact, String> fileNameMap = new LinkedHashMap<Artifact, String>();
-        Map<String, Artifact> names = new HashMap<String, Artifact>();
+        Map<Artifact, String> artifactMap = new LinkedHashMap<Artifact, String>();
+        Map<String, Artifact> fileNameMap = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
             boolean matched = false;
             for (Dependency dependency : dependencies) {//
@@ -95,13 +101,15 @@ public class FatJarMojo extends AbstractMojo {
                 }
             }
             if (matched == false) {
-                Artifact exist = names.get(artifact.getFile().getName());
-                if (exist == null) {
-                    names.put(artifact.getFile().getName(), artifact);
-                    fileNameMap.put(artifact, artifact.getFile().getName());
+                Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
+                if (artifact0 == null) {
+                    String fileName = artifact.getFile().getName();
+                    fileNameMap.put(fileName, artifact);
+                    artifactMap.put(artifact, fileName);
                 } else {
-                    fileNameMap.put(artifact, artifact.getGroupId() + "-" + artifact.getFile().getName());
-                    fileNameMap.put(exist, exist.getGroupId() + "-" + exist.getFile().getName());
+                    String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
+                    fileNameMap.put(fullFileName, artifact);
+                    artifactMap.put(artifact, fullFileName);
                 }
             }
         }
@@ -143,7 +151,7 @@ public class FatJarMojo extends AbstractMojo {
             }
 
             // 3.import indirect dependency
-            for (Map.Entry<Artifact, String> entry : fileNameMap.entrySet()) {
+            for (Map.Entry<Artifact, String> entry : artifactMap.entrySet()) {
                 out.putNextEntry(new ZipEntry(libDirectory + entry.getValue()));
                 IOUtils.copy(new FileInputStream(entry.getKey().getFile()), out);
                 out.closeEntry();

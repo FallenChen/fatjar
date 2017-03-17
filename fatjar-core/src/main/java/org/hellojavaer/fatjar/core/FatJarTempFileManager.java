@@ -36,7 +36,7 @@ class FatJarTempFileManager {
     private static final String                            FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
     private static Logger                                  logger                = LoggerFactory.getLogger(FatJarTempFileManager.class);
     private static String                                  tempDir;
-    private static File                                    createdTempDir;
+    private static volatile File                           createdTempDir;
 
     // key:'file:/a/b.jar!/c/d.jar'
     private static ConcurrentHashMap<String, FileWrapper>  map                   = new ConcurrentHashMap();
@@ -57,15 +57,35 @@ class FatJarTempFileManager {
 
     private static AtomicBoolean tag = new AtomicBoolean(false);
 
-    private static void printTempFileLocation(File dir) {
+    public static void initTempFileDir() {
+        if (createdTempDir == null) {
+            synchronized (FatJarTempFileManager.class) {
+                if (createdTempDir == null) {
+                    String actPath = tempDir;
+                    if (tempDir == null) {
+                        actPath = FatJarClassLoaderUtils.getBaseDirectry(FatJarTempFileManager.class).getPath()
+                                  + FATJAR_TEMP_FILE_PATH;
+                    }
+                    createdTempDir = new File(actPath);
+                    if (!createdTempDir.exists()) {
+                        createdTempDir.mkdirs();
+                    }
+                } else {
+                    if (!createdTempDir.exists()) {
+                        createdTempDir.mkdirs();
+                    }
+                }
+            }
+        }
         if (tag.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
-                logger.info("[FarJar] fatjar temporary direcotry is at {}", dir.getAbsolutePath());
+                logger.info("[FarJar] fatjar temporary direcotry is at {}", createdTempDir.getAbsolutePath());
             }
         }
     }
 
     public static JarFile buildJarFile(String key, String fileName, InputStream inputStream) throws IOException {
+        initTempFileDir();
         fileName = URLEncoder.encode(fileName, "UTF-8");
         synchronized (getLockObject(key)) {
             FileWrapper fileWrapper = map.get(key);
@@ -77,24 +97,6 @@ class FatJarTempFileManager {
                 return jarFile;
             }
             File file = null;
-            if (createdTempDir == null) {
-                String actPath = tempDir;
-                if (tempDir == null) {
-                    actPath = FatJarClassLoaderUtils.getBaseDirectry(FatJarTempFileManager.class).getPath()
-                              + FATJAR_TEMP_FILE_PATH;
-                }
-                createdTempDir = new File(actPath);
-                if (!createdTempDir.exists()) {
-                    createdTempDir.mkdirs();
-                }
-            } else {
-                if (!createdTempDir.exists()) {
-                    createdTempDir.mkdirs();
-                }
-            }
-            //
-            printTempFileLocation(createdTempDir);
-            //
             String encodeFileName = URLEncoder.encode(key, "UTF-8");
             file = new File(createdTempDir, encodeFileName);
             if (file.exists()) {

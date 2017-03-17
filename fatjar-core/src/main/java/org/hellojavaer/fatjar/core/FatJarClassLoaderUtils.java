@@ -40,6 +40,13 @@ public class FatJarClassLoaderUtils {
 
     private static boolean                                   registeredURLHandler = false;
 
+    public static void boot() {
+        logger.info("|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|");
+        injectFatJarClassLoader();
+        registerUrlProtocolHandler();
+        logger.info("|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|");
+    }
+
     public static FatJarClassLoader injectFatJarClassLoader() {
         return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
     }
@@ -64,7 +71,7 @@ public class FatJarClassLoaderUtils {
         if (childDelegate != null) {
             nestedDelegate = childDelegate;
             if (logger.isInfoEnabled()) {
-                logger.info("[FatJar] get nestedDelegate:{} from {}", nestedDelegate, targetClassLoader.getClass());
+                logger.info("[FatJar] use [nestedDelegate:{}] from {}", nestedDelegate, targetClassLoader.getClass());
             }
             return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, nestedDelegate, nestedDelegate);
         } else {
@@ -83,7 +90,7 @@ public class FatJarClassLoaderUtils {
         if (childDelegate != null) {
             nestedDelegate = childDelegate;
             if (logger.isInfoEnabled()) {
-                logger.info("[FatJar] get nestedDelegate:{} from {}", nestedDelegate, targetClassLoader.getClass());
+                logger.info("[FatJar] use [nestedDelegate:{}] from {}", nestedDelegate, targetClassLoader.getClass());
             }
         }
         return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, delegate, nestedDelegate);
@@ -127,13 +134,14 @@ public class FatJarClassLoaderUtils {
     public static synchronized FatJarClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader,
                                                                          URL[] fatJarClassPaths, boolean delegate,
                                                                          boolean nestedDelegate) {
+        FatJarTempFileManager.initTempFileDir();
         FatJarClassLoader fatJarClassLoader = classLoaderMap.get(targetClassLoader);
         if (fatJarClassLoader != null) {
             return fatJarClassLoader;
         } else {
             try {
-                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, targetClassLoader.getParent(), targetClassLoader, delegate,
-                                                          nestedDelegate);
+                fatJarClassLoader = new FatJarClassLoader(fatJarClassPaths, targetClassLoader.getParent(),
+                                                          targetClassLoader, delegate, nestedDelegate);
                 // replace parent
                 Class<?> clazz = targetClassLoader.getClass();
                 while (clazz != null) {
