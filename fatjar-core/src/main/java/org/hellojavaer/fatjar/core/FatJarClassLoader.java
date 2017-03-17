@@ -207,7 +207,7 @@ public class FatJarClassLoader extends URLClassLoader {
         sb.append(child == null ? "null" : child.getClass().getName());
         sb.append("]->[");
         sb.append("own:");
-        sb.append(super.toString());
+        sb.append(super.getClass().getName());
         sb.append("]->[");
         sb.append("parent:");
         sb.append(getParent() == null ? "null" : getParent().getClass().getName());
@@ -572,7 +572,7 @@ public class FatJarClassLoader extends URLClassLoader {
             sb.append(child == null ? "null" : child.getClass().getName());
             sb.append("]->[");
             sb.append("own:");
-            sb.append(super.toString());
+            sb.append(super.getClass().getName());
             sb.append("]->[");
             sb.append("parent:");
             sb.append(getParent() == null ? "null" : getParent().getClass().getName());

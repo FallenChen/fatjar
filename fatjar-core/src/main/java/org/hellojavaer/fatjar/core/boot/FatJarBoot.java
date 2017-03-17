@@ -17,26 +17,17 @@ package org.hellojavaer.fatjar.core.boot;
 
 import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-
 /**
  *
- * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 02/03/2017.
+ * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 17/03/2017.
  */
-public class FatJarServletContextListener implements ServletContextListener {
+public class FatJarBoot {
 
     static {
         FatJarClassLoaderUtils.boot();
     }
 
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
-
+    public static void run() {
     }
 
-    @Override
-    public void contextDestroyed(ServletContextEvent sce) {
-
-    }
 }
