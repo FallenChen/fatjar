@@ -57,11 +57,7 @@ public class FatJarClassLoader extends URLClassLoader {
     private Map<String, ResourceEntry>                   loadedResources          = new HashMap<>();
     private Set<String>                                  notFoundResources        = new HashSet<>();
 
-    private String                                       basePath                 = "";
-
     private ConcurrentHashMap<String, Object>            lockMap                  = new ConcurrentHashMap<>();
-
-    private URL                                          fatJarURL;
 
     private boolean                                      initedNestedJars         = false;
 
@@ -91,32 +87,20 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    public FatJarClassLoader(JarFile fatJar, String basePath, ClassLoader parent, ClassLoader child, boolean delegate) {
-        super(new URL[0], parent);
+    public FatJarClassLoader(JarFile fatJar, URL url, ClassLoader parent, ClassLoader child, boolean delegate) {
+        super(new URL[] { url }, parent);
         this.fatJar = fatJar;
-        this.basePath = basePath;
         this.child = child;
         this.delegate = delegate;
-        try {
-            this.fatJarURL = new URL(basePath);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
-    public FatJarClassLoader(JarFile fatJar, String basePath, ClassLoader parent, ClassLoader child, boolean delegate,
+    public FatJarClassLoader(JarFile fatJar, URL url, ClassLoader parent, ClassLoader child, boolean delegate,
                              boolean useSelfAsChildrensParent) {
-        super(new URL[0], parent);
+        super(new URL[] { url }, parent);
         this.fatJar = fatJar;
-        this.basePath = basePath;
         this.child = child;
         this.delegate = delegate;
         this.useSelfAsChildrensParent = useSelfAsChildrensParent;
-        try {
-            this.fatJarURL = new URL(basePath);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     protected List<FatJarClassLoader> getSubClassLoaders() {
@@ -126,6 +110,10 @@ public class FatJarClassLoader extends URLClassLoader {
         } else {
             return this.subClassLoaders;
         }
+    }
+
+    private URL getURL() {
+        return getURLs()[0];
     }
 
     protected void initNestedJars() {
@@ -139,22 +127,22 @@ public class FatJarClassLoader extends URLClassLoader {
                             if (!jarEntry.isDirectory() && jarEntry.getName().endsWith(".jar")) {
                                 try {
                                     InputStream inputStream = fatJar.getInputStream(jarEntry);
-                                    String nextPrefix = basePath + SEPARATOR + jarEntry.getName();
-                                    JarFile subJarFile = FatJarTempFileManager.buildJarFile(nextPrefix,
-                                                                                            jarEntry.getName(),
-                                                                                            inputStream);
-                                    Manifest manifest = subJarFile.getManifest();
+                                    URL nestedJarURL = new URL(getURL().toString() + SEPARATOR + jarEntry.getName());
+                                    JarFile nestedJarFile = FatJarTempFileManager.buildJarFile(nestedJarURL.toString(),
+                                                                                               jarEntry.getName(),
+                                                                                               inputStream);
+                                    Manifest manifest = nestedJarFile.getManifest();
                                     if (isFatJar(manifest)) {
                                         if (useSelfAsChildrensParent) {
-                                            subClassLoaders.add(new FatJarClassLoader(subJarFile, nextPrefix, this,
-                                                                                      child, delegate, false));
+                                            subClassLoaders.add(new FatJarClassLoader(nestedJarFile, nestedJarURL,
+                                                                                      this, child, delegate, false));
                                         } else {
-                                            subClassLoaders.add(new FatJarClassLoader(subJarFile, nextPrefix,
+                                            subClassLoaders.add(new FatJarClassLoader(nestedJarFile, nestedJarURL,
                                                                                       getParent(), child, delegate,
                                                                                       false));
                                         }
                                     } else {
-                                        dependencyJars.put(jarEntry.getName(), subJarFile);
+                                        dependencyJars.put(jarEntry.getName(), nestedJarFile);
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -181,7 +169,7 @@ public class FatJarClassLoader extends URLClassLoader {
         sb.append(getParent() == null ? "null" : getParent().getClass().getName());
         sb.append("]");
         sb.append(",jarFile:");
-        sb.append(fatJarURL);
+        sb.append(getURL());
         return sb.toString();
     }
 
@@ -535,10 +523,10 @@ public class FatJarClassLoader extends URLClassLoader {
             }
             CodeSource codeSource = null;
             if (resource.getNestedJarEntryName() == null) {
-                codeSource = new CodeSource(fatJarURL, resource.getCertificates());
+                codeSource = new CodeSource(getURL(), resource.getCertificates());
             } else {
                 try {
-                    codeSource = new CodeSource(new URL(fatJarURL.toString() + SEPARATOR
+                    codeSource = new CodeSource(new URL(getURL().toString() + SEPARATOR
                                                         + resource.getNestedJarEntryName()), resource.getCertificates());
                 } catch (MalformedURLException e) {
                     throw new RuntimeException(e);
@@ -596,10 +584,11 @@ public class FatJarClassLoader extends URLClassLoader {
                 resource.setManifest(jarFile.getManifest());
                 resource.setCertificates(jarEntry.getCertificates());
                 if (nestedJar == null) {
-                    resource.setUrl(new URL(JAR_PROTOCOL + basePath + SEPARATOR + path));
+                    resource.setUrl(new URL(JAR_PROTOCOL + getURL().toString() + SEPARATOR + path));
                     resource.setNestedJarEntryName(null);
                 } else {
-                    resource.setUrl(new URL(JAR_PROTOCOL + basePath + SEPARATOR + nestedJar + SEPARATOR + path));
+                    resource.setUrl(new URL(JAR_PROTOCOL + getURL().toString() + SEPARATOR + nestedJar + SEPARATOR
+                                            + path));
                     resource.setNestedJarEntryName(nestedJar);
                 }
             } catch (IOException e) {

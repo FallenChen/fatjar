@@ -48,7 +48,7 @@ public class Main {
         if (startClass == null || startClass.length() == 0) {
             throw new IllegalArgumentException(START_CLASS_KEY + " is missing");
         }
-        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url.toString(), Main.class.getClassLoader(),
+        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, Main.class.getClassLoader(),
                                                                     null, false, true);
         Class<?> mainClazz = fatJarClassLoader.loadClass("org.hellojavaer.fatjar.core.boot.MainEntry");
         Method invokeMethod = mainClazz.getMethod("invoke", String.class, String[].class);
