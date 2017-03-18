@@ -15,7 +15,7 @@
  */
 package org.hellojavaer.fatjar.core.boot;
 
-import org.hellojavaer.fatjar.core.FatJarClassLoaderProxy;
+import org.hellojavaer.fatjar.core.FatJarClassLoader;
 import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
 import java.io.File;
@@ -48,11 +48,11 @@ public class Main {
         if (startClass == null || startClass.length() == 0) {
             throw new IllegalArgumentException(START_CLASS_KEY + " is missing");
         }
-        FatJarClassLoaderProxy fatJarClassLoader = new FatJarClassLoaderProxy(new URL[] { url }, null, null, false);
+        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url.toString(), Main.class.getClassLoader(),
+                                                                    null, false, true);
         Class<?> mainClazz = fatJarClassLoader.loadClass("org.hellojavaer.fatjar.core.boot.MainEntry");
         Method invokeMethod = mainClazz.getMethod("invoke", String.class, String[].class);
         invokeMethod.setAccessible(true);
         invokeMethod.invoke(null, startClass, args);
     }
-
 }

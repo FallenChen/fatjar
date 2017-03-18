@@ -65,6 +65,8 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private ClassLoader                            child             = null;
 
+    private boolean                                useSelfAsChildrensParent;
+
     static {
         //
         ClassLoader cl = String.class.getClassLoader();
@@ -87,12 +89,14 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    public FatJarClassLoader(JarFile fatJar, ClassLoader parent, ClassLoader child, boolean delegate, String basePath) {
+    public FatJarClassLoader(JarFile fatJar, String basePath, ClassLoader parent, ClassLoader child, boolean delegate,
+                             boolean useSelfAsChildrensParent) {
         super(new URL[0], parent);
         this.fatJar = fatJar;
-        this.child = child;
         this.basePath = basePath;
+        this.child = child;
         this.delegate = delegate;
+        this.useSelfAsChildrensParent = useSelfAsChildrensParent;
         try {
             this.fatJarURL = new URL(basePath);
         } catch (MalformedURLException e) {
@@ -126,8 +130,14 @@ public class FatJarClassLoader extends URLClassLoader {
                                                                                             inputStream);
                                     Manifest manifest = subJarFile.getManifest();
                                     if (FatJarClassLoaderProxy.isFatJar(manifest)) {
-                                        subClassLoaders.add(new FatJarClassLoader(subJarFile, getParent(), child,
-                                                                                  delegate, nextPrefix));
+                                        if (useSelfAsChildrensParent) {
+                                            subClassLoaders.add(new FatJarClassLoader(subJarFile, nextPrefix, this,
+                                                                                      child, delegate, false));
+                                        } else {
+                                            subClassLoaders.add(new FatJarClassLoader(subJarFile, nextPrefix,
+                                                                                      getParent(), child, delegate,
+                                                                                      false));
+                                        }
                                     } else {
                                         dependencyJars.put(jarEntry.getName(), subJarFile);
                                     }
