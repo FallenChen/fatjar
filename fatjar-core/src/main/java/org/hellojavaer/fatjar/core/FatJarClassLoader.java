@@ -715,6 +715,7 @@ public class FatJarClassLoader extends URLClassLoader {
                 }
             }
         }
+        method.setAccessible(true);
         return method;
     }
 

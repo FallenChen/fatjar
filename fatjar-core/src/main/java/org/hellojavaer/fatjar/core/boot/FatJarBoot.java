@@ -25,10 +25,10 @@ import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 public class FatJarBoot {
 
     static {
-        System.out.println("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
+        System.out.print("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
         FatJarClassLoaderUtils.injectFatJarClassLoader();
         FatJarClassLoaderUtils.registerUrlProtocolHandler();
-        System.out.println("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
+        System.out.print("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
     }
 
     public static void run() {
