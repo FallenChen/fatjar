@@ -21,7 +21,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
@@ -102,7 +101,7 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
                 try {
                     JarFile jar = new JarFile(jarFile);
                     Manifest manifest = jar.getManifest();
-                    if (isFatJar(manifest)) {
+                    if (FatJarClassLoader.isFatJar(manifest)) {
                         URL filePath = jarFile.getCanonicalFile().toURI().toURL();
                         internalFatJarClassLoaders.add(new FatJarClassLoader(jar, filePath.toString(), getParent(),
                                                                              child, nestedDelegate, false));
@@ -346,16 +345,5 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
     protected void addURL(URL url) {
         super.addURL(url);
         initOneURL(url);
-    }
-
-    static boolean isFatJar(Manifest manifest) {
-        if (manifest != null) {
-            Attributes attributes = manifest.getMainAttributes();
-            String fatJarVersion = attributes.getValue("Fat-Jar-Version");
-            if (fatJarVersion != null) {
-                return true;
-            }
-        }
-        return false;
     }
 }

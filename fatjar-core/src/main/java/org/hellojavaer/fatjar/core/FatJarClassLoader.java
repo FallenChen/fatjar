@@ -28,6 +28,7 @@ import java.security.Policy;
 import java.security.cert.Certificate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -129,7 +130,7 @@ public class FatJarClassLoader extends URLClassLoader {
                                                                                             jarEntry.getName(),
                                                                                             inputStream);
                                     Manifest manifest = subJarFile.getManifest();
-                                    if (FatJarClassLoaderProxy.isFatJar(manifest)) {
+                                    if (isFatJar(manifest)) {
                                         if (useSelfAsChildrensParent) {
                                             subClassLoaders.add(new FatJarClassLoader(subJarFile, nextPrefix, this,
                                                                                       child, delegate, false));
@@ -760,5 +761,16 @@ public class FatJarClassLoader extends URLClassLoader {
         public void setNestedJarEntryName(String nestedJarEntryName) {
             this.nestedJarEntryName = nestedJarEntryName;
         }
+    }
+
+    static boolean isFatJar(Manifest manifest) {
+        if (manifest != null) {
+            Attributes attributes = manifest.getMainAttributes();
+            String fatJarVersion = attributes.getValue("Fat-Jar-Version");
+            if (fatJarVersion != null) {
+                return true;
+            }
+        }
+        return false;
     }
 }
