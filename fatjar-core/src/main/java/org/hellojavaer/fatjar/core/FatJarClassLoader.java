@@ -39,34 +39,35 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
-    private static final String                    JAR_PROTOCOL      = "jar:";
-    private static final String                    CLASS_SUFFIX      = ".class";
-    private static final String                    SEPARATOR         = "!/";
+    private static final String                          JAR_PROTOCOL      = "jar:";
+    private static final String                          CLASS_SUFFIX      = ".class";
+    private static final String                          SEPARATOR         = "!/";
 
-    private static ClassLoader                     j2seClassLoader   = null;
-    private static SecurityManager                 securityManager   = null;
-    private static Map<Class, Map<String, Method>> methodMap         = new HashMap<>();
+    private static final Map<Class, Map<String, Method>> methodMap         = new HashMap<>();
 
-    private boolean                                delegate          = true;
+    private static ClassLoader                           j2seClassLoader   = null;
+    private static SecurityManager                       securityManager   = null;
 
-    private JarFile                                fatJar;
-    private Map<String, JarFile>                   dependencyJars    = new LinkedHashMap<>();
-    private List<FatJarClassLoader>                subClassLoaders   = new ArrayList<>();
+    private boolean                                      delegate          = true;
 
-    private Map<String, ResourceEntry>             loadedResources   = new HashMap<>();
-    private Set<String>                            notFoundResources = new HashSet<>();
+    private JarFile                                      fatJar;
+    private Map<String, JarFile>                         dependencyJars    = new LinkedHashMap<>();
+    private List<FatJarClassLoader>                      subClassLoaders   = new ArrayList<>();
 
-    private String                                 basePath          = "";
+    private Map<String, ResourceEntry>                   loadedResources   = new HashMap<>();
+    private Set<String>                                  notFoundResources = new HashSet<>();
 
-    private ConcurrentHashMap<String, Object>      lockMap           = new ConcurrentHashMap<>();
+    private String                                       basePath          = "";
 
-    private URL                                    fatJarURL;
+    private ConcurrentHashMap<String, Object>            lockMap           = new ConcurrentHashMap<>();
 
-    private boolean                                initedNestedJars  = false;
+    private URL                                          fatJarURL;
 
-    private ClassLoader                            child             = null;
+    private boolean                                      initedNestedJars  = false;
 
-    private boolean                                useSelfAsChildrensParent;
+    private ClassLoader                                  child             = null;
+
+    private boolean                                      useSelfAsChildrensParent;
 
     static {
         //
@@ -237,7 +238,7 @@ public class FatJarClassLoader extends URLClassLoader {
             for (FatJarClassLoader subClassLoader : getSubClassLoaders()) {
                 if (subClassLoader.containsClass(name)) {
                     try {
-                        clazz = Class.forName(name, false, subClassLoader);
+                        clazz = subClassLoader.loadClass(name, resolve);
                         if (clazz != null) {
                             if (resolve) {
                                 resolveClass(clazz);
@@ -252,16 +253,12 @@ public class FatJarClassLoader extends URLClassLoader {
 
             // 3.0
             if (delegate && getParent() != null) {
-                try {
-                    clazz = Class.forName(name, false, getParent());
-                    if (clazz != null) {
-                        if (resolve) {
-                            resolveClass(clazz);
-                        }
-                        return clazz;
+                clazz = invokeLoadClass(getParent(), name, resolve);
+                if (clazz != null) {
+                    if (resolve) {
+                        resolveClass(clazz);
                     }
-                } catch (ClassNotFoundException e) {
-                    // ignore
+                    return clazz;
                 }
             }
             // 3.1
@@ -276,16 +273,12 @@ public class FatJarClassLoader extends URLClassLoader {
             }
             // 3.2
             if (!delegate && getParent() != null) {
-                try {
-                    clazz = Class.forName(name, false, getParent());
-                    if (clazz != null) {
-                        if (resolve) {
-                            resolveClass(clazz);
-                        }
-                        return clazz;
+                clazz = invokeLoadClass(getParent(), name, resolve);
+                if (clazz != null) {
+                    if (resolve) {
+                        resolveClass(clazz);
                     }
-                } catch (ClassNotFoundException e) {
-                    // ignore
+                    return clazz;
                 }
             }
             //
@@ -622,7 +615,27 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private Class<?> invokeFindClass(ClassLoader classLoader, String name) {
+    static Class<?> invokeLoadClass(ClassLoader classLoader, String name, boolean resolve) {
+        if (classLoader == null) {
+            return null;
+        }
+        Method method = getMethod(classLoader.getClass(), "loadClass", String.class, boolean.class);
+        try {
+            return (Class<?>) method.invoke(classLoader, name, resolve);
+        } catch (Exception e) {
+            Throwable temp = e;
+            while (temp != null) {
+                if (temp instanceof ClassNotFoundException) {
+                    return null;
+                } else {
+                    temp = temp.getCause();
+                }
+            }
+            throw new RuntimeException(e);
+        }
+    }
+
+    static Class<?> invokeFindClass(ClassLoader classLoader, String name) {
         if (classLoader == null) {
             return null;
         }
@@ -642,7 +655,7 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private URL invokeFindResource(ClassLoader classLoader, String name) {
+    static URL invokeFindResource(ClassLoader classLoader, String name) {
         if (classLoader == null) {
             return null;
         }
@@ -654,7 +667,7 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private Enumeration<URL> invokeFindResources(ClassLoader classLoader, String name) {
+    static Enumeration<URL> invokeFindResources(ClassLoader classLoader, String name) {
         if (classLoader == null) {
             return null;
         }
@@ -666,7 +679,7 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    private Method getMethod(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+    static Method getMethod(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
         if (clazz == null) {
             return null;
         }
