@@ -166,8 +166,7 @@ public class FatJarClassLoaderUtils {
     }
 
     private static boolean securityCheck(ClassLoader targetClassLoader) {
-        if (targetClassLoader instanceof FatJarClassLoader
-            || targetClassLoader instanceof FatJarClassLoader.InternalFatJarClassLoader) {
+        if (targetClassLoader instanceof FatJarClassLoader || targetClassLoader instanceof InternalFatJarClassLoader) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Can't inject FatJarClassLoader to ClassLoader:" + targetClassLoader);
             }
