@@ -25,7 +25,7 @@ class Logger {
         return true;
     }
 
-    public void info(String msg, Object... params) {
+    public void info(String msg) {
         System.out.println(msg);
     }
 
@@ -33,7 +33,7 @@ class Logger {
         return true;
     }
 
-    public void warn(String msg, Object... params) {
+    public void warn(String msg) {
         System.out.println(msg);
     }
 }

@@ -104,7 +104,7 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
                     if (FatJarClassLoader.isFatJar(manifest)) {
                         URL filePath = jarFile.getCanonicalFile().toURI().toURL();
                         fatJarClassLoaders.add(new FatJarClassLoader(jar, filePath.toString(), getParent(), child,
-                                                                     nestedDelegate, false));
+                                                                     nestedDelegate));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();

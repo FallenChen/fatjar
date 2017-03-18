@@ -39,35 +39,35 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
-    private static final String                          JAR_PROTOCOL      = "jar:";
-    private static final String                          CLASS_SUFFIX      = ".class";
-    private static final String                          SEPARATOR         = "!/";
+    private static final String                          JAR_PROTOCOL             = "jar:";
+    private static final String                          CLASS_SUFFIX             = ".class";
+    private static final String                          SEPARATOR                = "!/";
 
-    private static final Map<Class, Map<String, Method>> methodMap         = new HashMap<>();
+    private static final Map<Class, Map<String, Method>> methodMap                = new HashMap<>();
 
-    private static ClassLoader                           j2seClassLoader   = null;
-    private static SecurityManager                       securityManager   = null;
+    private static ClassLoader                           j2seClassLoader          = null;
+    private static SecurityManager                       securityManager          = null;
 
-    private boolean                                      delegate          = true;
+    private boolean                                      delegate                 = true;
 
     private JarFile                                      fatJar;
-    private Map<String, JarFile>                         dependencyJars    = new LinkedHashMap<>();
-    private List<FatJarClassLoader>                      subClassLoaders   = new ArrayList<>();
+    private Map<String, JarFile>                         dependencyJars           = new LinkedHashMap<>();
+    private List<FatJarClassLoader>                      subClassLoaders          = new ArrayList<>();
 
-    private Map<String, ResourceEntry>                   loadedResources   = new HashMap<>();
-    private Set<String>                                  notFoundResources = new HashSet<>();
+    private Map<String, ResourceEntry>                   loadedResources          = new HashMap<>();
+    private Set<String>                                  notFoundResources        = new HashSet<>();
 
-    private String                                       basePath          = "";
+    private String                                       basePath                 = "";
 
-    private ConcurrentHashMap<String, Object>            lockMap           = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Object>            lockMap                  = new ConcurrentHashMap<>();
 
     private URL                                          fatJarURL;
 
-    private boolean                                      initedNestedJars  = false;
+    private boolean                                      initedNestedJars         = false;
 
-    private ClassLoader                                  child             = null;
+    private ClassLoader                                  child                    = null;
 
-    private boolean                                      useSelfAsChildrensParent;
+    private boolean                                      useSelfAsChildrensParent = false;
 
     static {
         //
@@ -88,6 +88,19 @@ public class FatJarClassLoader extends URLClassLoader {
             } catch (AccessControlException e) {
                 // ignore
             }
+        }
+    }
+
+    public FatJarClassLoader(JarFile fatJar, String basePath, ClassLoader parent, ClassLoader child, boolean delegate) {
+        super(new URL[0], parent);
+        this.fatJar = fatJar;
+        this.basePath = basePath;
+        this.child = child;
+        this.delegate = delegate;
+        try {
+            this.fatJarURL = new URL(basePath);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 

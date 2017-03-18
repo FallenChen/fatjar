@@ -64,7 +64,8 @@ public class FatJarClassLoaderUtils {
         if (childDelegate != null) {
             nestedDelegate = childDelegate;
             if (logger.isInfoEnabled()) {
-                logger.info("[FatJar] use [nestedDelegate:{}] from {}", nestedDelegate, targetClassLoader.getClass());
+                logger.info(String.format("[FatJar] use [nestedDelegate:%s] from %s", nestedDelegate,
+                                          targetClassLoader.getClass()));
             }
             return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, nestedDelegate, nestedDelegate);
         } else {
@@ -86,7 +87,8 @@ public class FatJarClassLoaderUtils {
         if (childDelegate != null) {
             nestedDelegate = childDelegate;
             if (logger.isInfoEnabled()) {
-                logger.info("[FatJar] use [nestedDelegate:{}] from {}", nestedDelegate, targetClassLoader.getClass());
+                logger.info(String.format("[FatJar] use [nestedDelegate:%s] from %s", nestedDelegate,
+                                          targetClassLoader.getClass()));
             }
         }
         return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, delegate, nestedDelegate);
@@ -155,8 +157,8 @@ public class FatJarClassLoaderUtils {
                 }
                 classLoaderMap.put(targetClassLoader, fatJarClassLoader);
                 if (logger.isInfoEnabled()) {
-                    logger.info("[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader child:{},parent:{},delegate:{},nestedDelegate:{}} ]",
-                                targetClassLoader.toString(), targetClassLoader.toString(), delegate, nestedDelegate);
+                    logger.info(String.format("[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader child:%s,parent:%s,delegate:%s,nestedDelegate:%s} ]",
+                                              targetClassLoader, targetClassLoader, delegate, nestedDelegate));
                 }
                 return fatJarClassLoader;
             } catch (Exception e) {
@@ -168,7 +170,7 @@ public class FatJarClassLoaderUtils {
     private static boolean securityCheck(ClassLoader targetClassLoader) {
         if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Can't inject FatJarClassLoader to ClassLoader:" + targetClassLoader);
+                logger.warn("[FatJar] Can't inject FatJarClassLoader to ClassLoader:" + targetClassLoader);
             }
             return false;
         } else {

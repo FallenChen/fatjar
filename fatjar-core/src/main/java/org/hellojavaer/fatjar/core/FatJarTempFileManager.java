@@ -76,7 +76,8 @@ class FatJarTempFileManager {
         }
         if (tag.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
-                logger.info("[FarJar] fatjar temporary direcotry is at {}", createdTempDir.getAbsolutePath());
+                logger.info(String.format("[FarJar] fatjar temporary direcotry is at %s",
+                                          createdTempDir.getAbsolutePath()));
             }
         }
     }
@@ -101,13 +102,15 @@ class FatJarTempFileManager {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
-                        logger.info("[FarJar] + {} | created a new temp file in {}", key, file.getAbsolutePath());
+                        logger.info(String.format("[FarJar] + %s | created a new temp file in %s", key,
+                                                  file.getAbsolutePath()));
                     }
                 }
             } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info("[FarJar] + {} | created a new temp in {}", key, file.getAbsolutePath());
+                    logger.info(String.format("[FarJar] + %s | created a new temp file in %s", key,
+                                              file.getAbsolutePath()));
                 }
             }
             FileOutputStream tempOut = new FileOutputStream(file);
