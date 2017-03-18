@@ -45,6 +45,7 @@ public class FatJarMojo extends AbstractMojo {
     private static final String    FAT_JAR_VERSION_KEY = "Fat-Jar-Version";
 
     private static final String    START_CLASS_KEY     = "Start-Class";
+    private static final String    MAIN_CLASS_KEY      = "Main-Class";
 
     @Parameter(defaultValue = "${project.artifacts}", required = true, readonly = true)
     private Collection<Artifact>   artifacts;
@@ -82,12 +83,20 @@ public class FatJarMojo extends AbstractMojo {
         Map<String, Artifact> fileNameMap = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
             boolean matched = false;
+            if (artifact.getGroupId().equals("org.hellojavaer.fatjar")
+                && artifact.getArtifactId().equals("fatjar-core")) {//
+                if (!artifact.isOptional() && !"provided".equals(artifact.getScope())) {
+                    throw new MojoExecutionException(
+                                                     "This pom referenced the dependency of fatjar-core when building fatjar,"
+                                                             + " in this case, the 'optional' of fatjar-core muse be true or the scope of fatjar-core must be 'provided.'");
+                }
+            }
             for (Dependency dependency : dependencies) {//
                 if (dependency.getGroupId().equals(artifact.getGroupId())//
                     && dependency.getArtifactId().equals(artifact.getArtifactId())) {
                     String dependencyDesc = dependency.toString();
                     getLog().info("direct " + dependencyDesc);
-                    if ("true".equalsIgnoreCase(dependency.getOptional())) {
+                    if (dependency.isOptional()) {
                         if (directDependencyJarFile == null) {
                             directDependencyJarFile = artifact.getFile();
                             matched = true;
@@ -135,6 +144,7 @@ public class FatJarMojo extends AbstractMojo {
                 startClass = startClass.trim();
                 if (startClass.length() > 0) {
                     attributes.putValue(START_CLASS_KEY, startClass);
+                    attributes.putValue(MAIN_CLASS_KEY, "org.hellojavaer.fatjar.core.boot.Main");
                 }
             }
 
