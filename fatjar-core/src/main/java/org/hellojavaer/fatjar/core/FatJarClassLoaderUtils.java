@@ -15,9 +15,6 @@
  */
 package org.hellojavaer.fatjar.core;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -36,7 +33,7 @@ public class FatJarClassLoaderUtils {
 
     private static final Map<ClassLoader, FatJarClassLoader> classLoaderMap       = new HashMap<>();
 
-    private static Logger                                    logger               = LoggerFactory.getLogger(FatJarClassLoaderUtils.class);
+    private static Logger                                    logger               = new Logger();
 
     private static boolean                                   registeredURLHandler = false;
 

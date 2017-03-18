@@ -16,8 +16,6 @@
 package org.hellojavaer.fatjar.core.boot;
 
 import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -26,13 +24,11 @@ import org.slf4j.LoggerFactory;
  */
 public class FatJarBoot {
 
-    private static Logger logger = LoggerFactory.getLogger(FatJarBoot.class);
-
     static {
-        logger.info("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
+        System.out.println("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
         FatJarClassLoaderUtils.injectFatJarClassLoader();
         FatJarClassLoaderUtils.registerUrlProtocolHandler();
-        logger.info("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
+        System.out.println("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
     }
 
     public static void run() {

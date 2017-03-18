@@ -15,9 +15,6 @@
  */
 package org.hellojavaer.fatjar.core;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,7 +31,7 @@ import java.util.jar.JarFile;
 class FatJarTempFileManager {
 
     private static final String                            FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
-    private static Logger                                  logger                = LoggerFactory.getLogger(FatJarTempFileManager.class);
+    private static Logger                                  logger                = new Logger();
     private static String                                  tempDir;
     private static volatile File                           createdTempDir;
 
@@ -103,14 +100,14 @@ class FatJarTempFileManager {
                 if (encodeFileName.toLowerCase().endsWith("-snapshot.jar")) {
                     file.delete();
                     file.createNewFile();
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("[FarJar] + {} | created a new temp file in {}", key, file.getAbsolutePath());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[FarJar] + {} | created a new temp file in {}", key, file.getAbsolutePath());
                     }
                 }
             } else {
                 file.createNewFile();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("[FarJar] + {} | created a new temp in {}", key, file.getAbsolutePath());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[FarJar] + {} | created a new temp in {}", key, file.getAbsolutePath());
                 }
             }
             FileOutputStream tempOut = new FileOutputStream(file);

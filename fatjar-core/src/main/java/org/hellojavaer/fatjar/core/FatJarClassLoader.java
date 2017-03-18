@@ -15,9 +15,6 @@
  */
 package org.hellojavaer.fatjar.core;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -43,8 +40,6 @@ import java.util.jar.Manifest;
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 02/03/2017.
  */
 public class FatJarClassLoader extends URLClassLoader {
-
-    private static Logger                          logger                     = LoggerFactory.getLogger(FatJarClassLoader.class);
 
     private static ClassLoader                     j2seClassLoader            = null;
     private static SecurityManager                 securityManager            = null;
@@ -150,7 +145,7 @@ public class FatJarClassLoader extends URLClassLoader {
                                                                                      filePath.toString()));
                     }
                 } catch (IOException e) {
-                    logger.error(e.getMessage(), e);
+                    e.printStackTrace();
                 }
             }
         }
@@ -554,7 +549,7 @@ public class FatJarClassLoader extends URLClassLoader {
                                             dependencyJars.put(jarEntry.getName(), subJarFile);
                                         }
                                     } catch (IOException e) {
-                                        logger.error(e.getMessage(), e);
+                                        e.printStackTrace();
                                     }
                                 }// else ignore
                             }
