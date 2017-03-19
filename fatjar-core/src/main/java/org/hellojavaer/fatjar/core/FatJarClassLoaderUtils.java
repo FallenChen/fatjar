@@ -194,7 +194,7 @@ public class FatJarClassLoaderUtils {
                 if (temp == targetClassLoader) {
                     throw new IllegalArgumentException("parent list loop:" + sb + " ...");
                 } else {
-                    temp = parent.getParent();
+                    temp = temp.getParent();
                 }
             }
         }
