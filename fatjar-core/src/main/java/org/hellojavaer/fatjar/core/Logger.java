@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hellojavaer.fatjar.core.boot;
-
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+package org.hellojavaer.fatjar.core;
 
 /**
  *
- * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 02/03/2017.
+ * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 18/03/2017.
  */
-public class FatJarServletContextListener extends FatJarBoot implements ServletContextListener {
+class Logger {
 
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
-
+    public boolean isInfoEnabled() {
+        return true;
     }
 
-    @Override
-    public void contextDestroyed(ServletContextEvent sce) {
+    public void info(String msg) {
+        System.out.println(msg);
+    }
 
+    public boolean isWarnEnabled() {
+        return true;
+    }
+
+    public void warn(String msg) {
+        System.out.println(msg);
     }
 }

@@ -15,22 +15,24 @@
  */
 package org.hellojavaer.fatjar.core.boot;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
 
 /**
  *
- * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 02/03/2017.
+ *
+ * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 17/03/2017.
  */
-public class FatJarServletContextListener extends FatJarBoot implements ServletContextListener {
+public class FatJarBoot {
 
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
+    private static final ClassLoader classLoader;
 
+    static {
+        classLoader = FatJarClassLoaderUtils.injectFatJarClassLoaderProxy();
+        FatJarClassLoaderUtils.registerUrlProtocolHandler();
     }
 
-    @Override
-    public void contextDestroyed(ServletContextEvent sce) {
-
+    public static ClassLoader run() {
+        return classLoader;
     }
+
 }
