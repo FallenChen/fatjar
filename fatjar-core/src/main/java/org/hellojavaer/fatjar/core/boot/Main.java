@@ -47,7 +47,7 @@ public class Main {
             throw new IllegalArgumentException(START_CLASS_KEY + " is missing");
         }
         ClassLoader classLoader = Main.class.getClassLoader();
-        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, classLoader.getParent(), null, false,
+        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, classLoader.getParent(), classLoader, false,
                                                                     true);
         ClassLoader classLoader1 = FatJarClassLoaderUtils.injectFatJarClassLoader(classLoader, fatJarClassLoader);
         Class<?> mainClazz = classLoader1.loadClass("org.hellojavaer.fatjar.core.boot.MainEntry");

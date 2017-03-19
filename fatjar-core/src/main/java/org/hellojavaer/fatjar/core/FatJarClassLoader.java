@@ -68,10 +68,9 @@ public class FatJarClassLoader extends URLClassLoader {
     static {
         //
         try {
-            ClassLoader cl = FatJarClassLoader.class.getClassLoader();
-            cl.loadClass(ResourceEntry.class.getName());
-            cl.loadClass(FatJarSystemConfig.class.getName());
-            cl.loadClass(FatJarTempFileManager.class.getName());
+            Class.forName(ResourceEntry.class.getName(), false, FatJarClassLoader.class.getClassLoader());
+            Class.forName(FatJarSystemConfig.class.getName(), false, FatJarClassLoader.class.getClassLoader());
+            Class.forName(FatJarTempFileManager.class.getName(), false, FatJarClassLoader.class.getClassLoader());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -560,7 +559,7 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected ResourceEntry findResourceInternal(String name, String path) {
-        if (filterResource(name)) {
+        if (filterResource(path)) {
             return null;
         }
         if (notFoundResources.contains(name)) {
