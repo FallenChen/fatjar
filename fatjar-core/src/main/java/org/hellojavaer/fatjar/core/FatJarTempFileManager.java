@@ -42,7 +42,8 @@ class FatJarTempFileManager {
 
     static {
         try {
-            Class.forName(FileWrapper.class.getName());
+            ClassLoader cl = FatJarTempFileManager.class.getClassLoader();
+            cl.loadClass(FileWrapper.class.getName());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

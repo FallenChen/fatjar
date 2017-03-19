@@ -68,9 +68,10 @@ public class FatJarClassLoader extends URLClassLoader {
     static {
         //
         try {
-            Class.forName(ResourceEntry.class.getName());
-            Class.forName(FatJarSystemConfig.class.getName());
-            Class.forName(FatJarTempFileManager.class.getName());
+            ClassLoader cl = FatJarClassLoader.class.getClassLoader();
+            cl.loadClass(ResourceEntry.class.getName());
+            cl.loadClass(FatJarSystemConfig.class.getName());
+            cl.loadClass(FatJarTempFileManager.class.getName());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
