@@ -22,8 +22,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLStreamHandlerFactory;
 import java.security.CodeSource;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  *
@@ -31,67 +29,73 @@ import java.util.Map;
  */
 public class FatJarClassLoaderUtils {
 
-    private static final Map<ClassLoader, FatJarClassLoaderProxy> classLoaderMap       = new HashMap<>();
+    private static Logger  logger               = new Logger();
 
-    private static Logger                                         logger               = new Logger();
+    private static boolean registeredURLHandler = false;
 
-    private static boolean                                        registeredURLHandler = false;
-
-    public static FatJarClassLoaderProxy injectFatJarClassLoader() {
-        return injectFatJarClassLoader(FatJarClassLoaderUtils.class.getClassLoader());
+    static {
+        FatJarTempFileManager.initTempFileDir();
     }
 
-    public static FatJarClassLoaderProxy injectFatJarClassLoader(ClassLoader targetClassLoader) {
-        if (!securityCheck(targetClassLoader)) {
-            return null;
-        }
-        URL[] fatJarClassPaths = null;
-        if (targetClassLoader instanceof URLClassLoader) {
-            fatJarClassPaths = ((URLClassLoader) targetClassLoader).getURLs();
-        } else {
-            fatJarClassPaths = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
-        }
-        Boolean delegate = FatJarSystemConfig.loadDelegate();
-        if (delegate == null) {
-            delegate = FatJarClassLoaderProxy.DEFAULT_DELEGATE;
-        }
-        Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
-        if (nestedDelegate == null) {
-            nestedDelegate = FatJarClassLoaderProxy.DEFAULT_NESTED_DELEGATE;
-        }
-        //
-        Boolean childDelegate = getDelegate(targetClassLoader);
-        if (childDelegate != null) {
-            nestedDelegate = childDelegate;
-            if (logger.isInfoEnabled()) {
-                logger.info(String.format("[FatJar] use [nestedDelegate:%s] from %s", nestedDelegate,
-                                          targetClassLoader.getClass()));
-            }
-            return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, nestedDelegate, nestedDelegate);
-        } else {
-            return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, delegate, nestedDelegate);
-        }
+    public static ClassLoader injectFatJarClassLoaderProxy() {
+        return injectFatJarClassLoaderProxy(FatJarClassLoaderUtils.class.getClassLoader());
     }
 
-    public static FatJarClassLoaderProxy injectFatJarClassLoader(ClassLoader targetClassLoader, URL[] fatJarClassPaths,
-                                                                 boolean delegate) {
-        if (!securityCheck(targetClassLoader)) {
-            return null;
-        }
-        Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
-        if (nestedDelegate == null) {
-            nestedDelegate = FatJarClassLoaderProxy.DEFAULT_NESTED_DELEGATE;
-        }
-        //
-        Boolean childDelegate = getDelegate(targetClassLoader);
-        if (childDelegate != null) {
-            nestedDelegate = childDelegate;
-            if (logger.isInfoEnabled()) {
-                logger.info(String.format("[FatJar] use [nestedDelegate:%s] from %s", nestedDelegate,
-                                          targetClassLoader.getClass()));
+    public static ClassLoader injectFatJarClassLoaderProxy(ClassLoader targetClassLoader) {
+        synchronized (targetClassLoader) {
+            if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("[FatJar] " + targetClassLoader + " can't be inject");
+                }
+                return null;
+            } else {
+                ClassLoader parent0 = targetClassLoader.getParent();
+                if (parent0 != null
+                    && (parent0 instanceof FatJarClassLoaderProxy || parent0 instanceof FatJarClassLoader)) {
+                    if (logger.isWarnEnabled()) {
+                        // StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+                        logger.warn("[FatJar] targetClassLoader:" + targetClassLoader + " has been injected:"
+                                    + parent0.toString() + " .It can't been injected again.");
+                    }
+                    return parent0;
+                }
             }
+            //
+            URL[] fatJarClassPaths = null;
+            if (targetClassLoader instanceof URLClassLoader) {
+                fatJarClassPaths = ((URLClassLoader) targetClassLoader).getURLs();
+            } else {
+                fatJarClassPaths = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
+            }
+            Boolean delegate = FatJarSystemConfig.loadDelegate();
+            if (delegate == null) {
+                delegate = FatJarClassLoaderProxy.DEFAULT_DELEGATE;
+            }
+            Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
+            if (nestedDelegate == null) {
+                nestedDelegate = FatJarClassLoaderProxy.DEFAULT_NESTED_DELEGATE;
+            }
+            //
+            Boolean childDelegate = getDelegate(targetClassLoader);
+            if (childDelegate != null) {
+                nestedDelegate = childDelegate;
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("[FatJar] use [nestedDelegate:%s] from %s", nestedDelegate,
+                                              targetClassLoader.getClass()));
+                }
+                delegate = nestedDelegate;
+            }
+            FatJarClassLoaderProxy fatJarClassLoaderProxy = new FatJarClassLoaderProxy(fatJarClassPaths,
+                                                                                       targetClassLoader.getParent(),
+                                                                                       targetClassLoader, delegate,
+                                                                                       nestedDelegate);
+            replaceParent(targetClassLoader, fatJarClassLoaderProxy);
+            if (logger.isInfoEnabled()) {
+                logger.info(String.format("[FatJar] inject FatJarClassLoaderProxy child:%s,parent:%s,delegate:%s,nestedDelegate:%s} ]",
+                                          targetClassLoader, targetClassLoader, delegate, nestedDelegate));
+            }
+            return fatJarClassLoaderProxy;
         }
-        return injectFatJarClassLoader(targetClassLoader, fatJarClassPaths, delegate, nestedDelegate);
     }
 
     private static Boolean getDelegate(ClassLoader classLoader) {
@@ -129,57 +133,90 @@ public class FatJarClassLoaderUtils {
         return null;
     }
 
-    public static synchronized FatJarClassLoaderProxy injectFatJarClassLoader(ClassLoader targetClassLoader,
-                                                                              URL[] fatJarClassPaths, boolean delegate,
-                                                                              boolean nestedDelegate) {
-        if (!securityCheck(targetClassLoader)) {
-            return null;
-        }
-        FatJarTempFileManager.initTempFileDir();
-        FatJarClassLoaderProxy fatJarClassLoader = classLoaderMap.get(targetClassLoader);
-        if (fatJarClassLoader != null) {
-            return fatJarClassLoader;
-        } else {
-            try {
-                fatJarClassLoader = new FatJarClassLoaderProxy(fatJarClassPaths, targetClassLoader.getParent(),
-                                                               targetClassLoader, delegate, nestedDelegate);
-                // replace parent
-                Class<?> clazz = targetClassLoader.getClass();
-                while (clazz != null) {
-                    try {
-                        Field nameField = clazz.getDeclaredField("parent");
-                        nameField.setAccessible(true);
-                        nameField.set(targetClassLoader, fatJarClassLoader);
-                        break;
-                    } catch (Exception e) {
-                        clazz = clazz.getSuperclass();
+    public static ClassLoader injectFatJarClassLoaderProxy(ClassLoader targetClassLoader, FatJarClassLoaderProxy parent) {
+        loopCheck(targetClassLoader, parent);
+        synchronized (targetClassLoader) {
+            if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("[FatJar] " + targetClassLoader + " can't be inject");
+                }
+                return null;
+            } else {
+                ClassLoader parent0 = targetClassLoader.getParent();
+                if (parent0 != null
+                    && (parent0 instanceof FatJarClassLoaderProxy || parent0 instanceof FatJarClassLoader)) {
+                    if (logger.isWarnEnabled()) {
+                        // StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+                        logger.warn("[FatJar] targetClassLoader:" + targetClassLoader + " has been injected:"
+                                    + parent0.toString() + " .It can't been injected again.");
                     }
+                    return parent0;
                 }
-                classLoaderMap.put(targetClassLoader, fatJarClassLoader);
-                if (logger.isInfoEnabled()) {
-                    logger.info(String.format("[FatJar] FatJarClassLoaderUtils.injectFatJarClassLoader child:%s,parent:%s,delegate:%s,nestedDelegate:%s} ]",
-                                              targetClassLoader, targetClassLoader, delegate, nestedDelegate));
+            }
+            //
+            replaceParent(targetClassLoader, parent);
+            return parent;
+        }
+    }
+
+    public static ClassLoader injectFatJarClassLoader(ClassLoader targetClassLoader, FatJarClassLoader parent) {
+        loopCheck(targetClassLoader, parent);
+        synchronized (targetClassLoader) {
+            if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("[FatJar] " + targetClassLoader + " can't be inject");
                 }
-                return fatJarClassLoader;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                return null;
+            } else {
+                ClassLoader parent0 = targetClassLoader.getParent();
+                if (parent0 != null
+                    && (parent0 instanceof FatJarClassLoaderProxy || parent0 instanceof FatJarClassLoader)) {
+                    if (logger.isWarnEnabled()) {
+                        // StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+                        logger.warn("[FatJar] targetClassLoader:" + targetClassLoader + " has been injected:"
+                                    + parent0.toString() + " .It can't been injected again.");
+                    }
+                    return parent0;
+                }
+            }
+            replaceParent(targetClassLoader, parent);
+            return parent;
+        }
+    }
+
+    private static void loopCheck(ClassLoader targetClassLoader, ClassLoader parent) {
+        if (targetClassLoader != null && parent != null) {
+            ClassLoader temp = parent;
+            StringBuilder sb = new StringBuilder();
+            while (temp != null) {
+                sb.append(temp.getClass().getName());
+                sb.append("->");
+                if (temp == targetClassLoader) {
+                    throw new IllegalArgumentException("parent list loop:" + sb + " ...");
+                } else {
+                    temp = parent.getParent();
+                }
             }
         }
     }
 
-    private static boolean securityCheck(ClassLoader targetClassLoader) {
-        if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("[FatJar] Can't inject FatJarClassLoader to ClassLoader:" + targetClassLoader);
+    private static void replaceParent(ClassLoader targetClassLoader, ClassLoader newParent) {
+        Class<?> clazz = targetClassLoader.getClass();
+        while (clazz != null) {
+            try {
+                Field nameField = clazz.getDeclaredField("parent");
+                nameField.setAccessible(true);
+                nameField.set(targetClassLoader, newParent);
+                return;
+            } catch (Exception e) {
+                clazz = clazz.getSuperclass();
             }
-            return false;
-        } else {
-            return true;
         }
+        throw new IllegalStateException("Can't replace the parent of ClassLoader:"
+                                        + targetClassLoader.getClass().getName());
     }
 
     public static void registerUrlProtocolHandler() {
-
         if (!registeredURLHandler) {
             synchronized (FatJarClassLoaderUtils.class) {
                 if (!registeredURLHandler) {
@@ -198,7 +235,7 @@ public class FatJarClassLoaderUtils {
                         }
                     }
                     if (logger.isInfoEnabled()) {
-                        logger.info("[FarJar] FatJarClassLoaderUtils.registerUrlProtocolHandler success");
+                        logger.info("[FarJar] register UrlProtocolHandler success");
                     }
                     registeredURLHandler = true;
                 }
