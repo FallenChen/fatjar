@@ -82,42 +82,40 @@ public class FatJarMojo extends AbstractMojo {
         Map<Artifact, String> artifactMap = new LinkedHashMap<Artifact, String>();
         Map<String, Artifact> fileNameMap = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
-            boolean matched = false;
-            if (artifact.getGroupId().equals("org.hellojavaer.fatjar")//
-                && artifact.getArtifactId().equals("fatjar-core") //
-                && artifact.isOptional() == false) {//
-                getLog().warn("fatjar-core will not been built into fatjar.");
-            }
+            boolean isSkip = false;
             for (Dependency dependency : dependencies) {//
                 if (dependency.getGroupId().equals(artifact.getGroupId())//
                     && dependency.getArtifactId().equals(artifact.getArtifactId())) {
                     if (dependency.isOptional()) {
                         if (directDependencyJarFile == null) {
                             directDependencyJarFile = artifact.getFile();
-                            matched = true;
                             getLog().info("use " + dependency.toString() + " as main-dependency");
-                            continue;
                         } else {
                             throw new MojoExecutionException(
                                                              "fatjar-maven-plugin use the direct dependency which 'optional' is true as the main-dependency,"
                                                                      + " but there are multiple direct dependencies match this condition.");
                         }
-                    } else {
-                        continue;
                     }
+                    isSkip = true;
+                    break;
                 }
             }
-            if (matched == false) {
-                Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
-                if (artifact0 == null) {
-                    String fileName = artifact.getFile().getName();
-                    fileNameMap.put(fileName, artifact);
-                    artifactMap.put(artifact, fileName);
-                } else {
-                    String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
-                    fileNameMap.put(fullFileName, artifact);
-                    artifactMap.put(artifact, fullFileName);
-                }
+            if (isSkip) {
+                continue;
+            }
+            if (artifact.getGroupId().equals("org.hellojavaer.fatjar")//
+                && artifact.getArtifactId().startsWith("fatjar-core")) {//
+                continue;
+            }
+            Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
+            if (artifact0 == null) {
+                String fileName = artifact.getFile().getName();
+                fileNameMap.put(fileName, artifact);
+                artifactMap.put(artifact, fileName);
+            } else {
+                String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
+                fileNameMap.put(fullFileName, artifact);
+                artifactMap.put(artifact, fullFileName);
             }
         }
         if (directDependencyJarFile == null) {
