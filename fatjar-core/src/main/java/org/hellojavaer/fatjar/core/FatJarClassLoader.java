@@ -476,7 +476,19 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected boolean containsResource(String name) {
+        if (filterResource(name)) {
+            return false;
+        }
         if (fatJar != null && fatJar.getJarEntry(name) != null) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    protected boolean filterResource(String name) {
+        if (!"org/hellojavaer/fatjar/core/MainEntry.class".equals(name)
+            && name.startsWith("org/hellojavaer/fatjar/core/")) {
             return true;
         } else {
             return false;
@@ -539,6 +551,9 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected ResourceEntry findResourceInternal(String name, String path) {
+        if (filterResource(name)) {
+            return null;
+        }
         if (notFoundResources.contains(name)) {
             return null;
         }
