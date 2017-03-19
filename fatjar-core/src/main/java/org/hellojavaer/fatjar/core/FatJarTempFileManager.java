@@ -41,6 +41,11 @@ class FatJarTempFileManager {
     private static final ConcurrentHashMap<String, Object> lockMap               = new ConcurrentHashMap<>();
 
     static {
+        try {
+            Class.forName(FileWrapper.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         tempDir = FatJarSystemConfig.getTempDir();
     }
 

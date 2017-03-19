@@ -24,15 +24,15 @@ import org.hellojavaer.fatjar.core.FatJarClassLoaderUtils;
  */
 public class FatJarBoot {
 
+    private static final ClassLoader classLoader;
+
     static {
-        System.out.print("\n|=========================================|\n|========== Fat-Jar is booting ===========|\n|=========================================|\n");
-        FatJarClassLoaderUtils.injectFatJarClassLoader();
+        classLoader = FatJarClassLoaderUtils.injectFatJarClassLoaderProxy();
         FatJarClassLoaderUtils.registerUrlProtocolHandler();
-        System.out.print("\n|=========================================|\n|========== Fat-Jar boot success =========|\n|=========================================|\n");
     }
 
-    public static void run() {
-        //
+    public static ClassLoader run() {
+        return classLoader;
     }
 
 }

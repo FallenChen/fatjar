@@ -67,6 +67,14 @@ public class FatJarClassLoader extends URLClassLoader {
 
     static {
         //
+        try {
+            Class.forName(ResourceEntry.class.getName());
+            Class.forName(FatJarSystemConfig.class.getName());
+            Class.forName(FatJarTempFileManager.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        //
         ClassLoader cl = String.class.getClassLoader();
         if (cl == null) {
             cl = getSystemClassLoader();
@@ -487,7 +495,7 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected boolean filterResource(String name) {
-        if (!"org/hellojavaer/fatjar/core/MainEntry.class".equals(name)
+        if (!"org/hellojavaer/fatjar/core/boot/MainEntry.class".equals(name)
             && name.startsWith("org/hellojavaer/fatjar/core/")) {
             return true;
         } else {
