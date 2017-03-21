@@ -34,7 +34,10 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
- *
+ * 
+ * FatJarClassLoader classload is based on a fatjar 
+ * 
+ * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 18/03/2017.
  */
 public class FatJarClassLoader extends URLClassLoader {
@@ -66,14 +69,10 @@ public class FatJarClassLoader extends URLClassLoader {
     private boolean                                      useSelfAsChildrensParent = false;
 
     static {
-        //
-        try {
-            Class.forName(ResourceEntry.class.getName(), false, FatJarClassLoader.class.getClassLoader());
-            Class.forName(FatJarSystemConfig.class.getName(), false, FatJarClassLoader.class.getClassLoader());
-            Class.forName(FatJarTempFileManager.class.getName(), false, FatJarClassLoader.class.getClassLoader());
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        // 0. force the classload which loaded FatJarClassLoader to load this following directly dependency classes
+        Class<?> temp = ResourceEntry.class;
+        temp = FatJarSystemConfig.class;
+        temp = FatJarTempFileManager.class;
         //
         ClassLoader cl = String.class.getClassLoader();
         if (cl == null) {

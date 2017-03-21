@@ -21,19 +21,52 @@ package org.hellojavaer.fatjar.core;
  */
 class Logger {
 
-    public boolean isInfoEnabled() {
-        return true;
+    public boolean isErrorEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
-    public void info(String msg) {
-        System.out.println(msg);
+    public void error(String msg) {
+        System.out.println("ERROR: [FatJar] -| " + msg);
     }
 
     public boolean isWarnEnabled() {
-        return true;
+        if (FatJarSystemConfig.getLogLevel() >= 1) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public void warn(String msg) {
-        System.out.println(msg);
+        System.out.println("WARN: [FatJar] —| " + msg);
     }
+
+    public boolean isInfoEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void info(String msg) {
+        System.out.println("INFO: [FatJar] -| " + msg);
+    }
+
+    public boolean isDebugEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 3) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void debug(String msg) {
+        System.out.println("DEBUG: [FatJar] -| " + msg);
+    }
+
 }

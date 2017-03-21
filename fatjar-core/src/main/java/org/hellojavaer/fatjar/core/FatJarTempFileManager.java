@@ -30,22 +30,20 @@ import java.util.jar.JarFile;
  */
 class FatJarTempFileManager {
 
-    private static final String                            FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
-    private static Logger                                  logger                = new Logger();
-    private static String                                  tempDir;
-    private static volatile File                           createdTempDir;
+    private static final String                                 FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
+    private static Logger                                       logger                = new Logger();
+    private static String                                       tempDir;
+    private static volatile File                                createdTempDir;
 
     // key:'file:/a/b.jar!/c/d.jar'
-    private static ConcurrentHashMap<String, FileWrapper>  map                   = new ConcurrentHashMap();
+    private static final ConcurrentHashMap<String, FileWrapper> map                   = new ConcurrentHashMap();
 
-    private static final ConcurrentHashMap<String, Object> lockMap               = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Object>      lockMap               = new ConcurrentHashMap<>();
 
     static {
-        try {
-            Class.forName(FileWrapper.class.getName(), false, FatJarTempFileManager.class.getClassLoader());
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        //
+        Class<?> clazz = FileWrapper.class;
+        //
         tempDir = FatJarSystemConfig.getTempDir();
     }
 
@@ -81,7 +79,7 @@ class FatJarTempFileManager {
         }
         if (tag.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
-                logger.info(String.format("[FarJar] fatjar temporary direcotry is at %s",
+                logger.info(String.format("fatjar temporary direcotry is at %s",
                                           createdTempDir.getAbsolutePath()));
             }
         }
@@ -107,14 +105,14 @@ class FatJarTempFileManager {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
-                        logger.info(String.format("[FarJar] + %s | created a new temp file in %s", key,
+                        logger.info(String.format("+ %s | created a new temp file in %s", key,
                                                   file.getAbsolutePath()));
                     }
                 }
             } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("[FarJar] + %s | created a new temp file in %s", key,
+                    logger.info(String.format("+ %s | created a new temp file in %s", key,
                                               file.getAbsolutePath()));
                 }
             }
