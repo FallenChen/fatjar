@@ -21,10 +21,18 @@ package org.hellojavaer.fatjar.core;
  */
 class FatJarSystemConfig {
 
+    private static final Logger logger              = new Logger();
+
     private static final String DELEGATE_KEY        = "fatjar.load.delegate";
     private static final String NESTED_DELEGATE_KEY = "fatjar.load.nested.delegate";
     private static final String TEMP_FILE_DIR_KEY   = "fatjar.temp.dir";
     private static final String LOG_LEVEL_KEY       = "fatjar.log.level";
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarSystemConfig is loaded by " + FatJarSystemConfig.class.getClassLoader());
+        }
+    }
 
     public static Boolean loadDelegate() {
         String val = get(DELEGATE_KEY);
@@ -62,6 +70,8 @@ class FatJarSystemConfig {
             return 2;
         } else if ("debug".equals(level)) {
             return 3;
+        } else if ("trace".equals(level)) {
+            return 4;
         } else {
             return 2;
         }

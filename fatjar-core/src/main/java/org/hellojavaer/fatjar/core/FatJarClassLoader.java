@@ -42,6 +42,7 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
+    private static final Logger                          logger                   = new Logger();
     private static final String                          JAR_PROTOCOL             = "jar:";
     private static final String                          CLASS_SUFFIX             = ".class";
     private static final String                          SEPARATOR                = "!/";
@@ -69,6 +70,10 @@ public class FatJarClassLoader extends URLClassLoader {
     private boolean                                      useSelfAsChildrensParent = false;
 
     static {
+        //
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarClassLoader is loaded by " + FatJarClassLoader.class.getClassLoader());
+        }
         // 0. force the classload which loaded FatJarClassLoader to load this following directly dependency classes
         Class<?> temp = ResourceEntry.class;
         temp = FatJarSystemConfig.class;
@@ -166,17 +171,22 @@ public class FatJarClassLoader extends URLClassLoader {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("[child:");
+        sb.append("[{child:");
         sb.append(child == null ? "null" : child.getClass().getName());
-        sb.append("]->[");
+        sb.append("}->{");
         sb.append("own:");
-        sb.append(super.getClass().getName());
-        sb.append("]->[");
+        sb.append(this.getClass().getName());
+        sb.append(",delegate:");
+        sb.append(delegate);
+        sb.append(",useSelfAsChildrensParent:");
+        sb.append(useSelfAsChildrensParent);
+        sb.append("}->{");
         sb.append("parent:");
         sb.append(getParent() == null ? "null" : getParent().getClass().getName());
-        sb.append("]");
+        sb.append("}");
         sb.append(",jarFile:");
         sb.append(getURL());
+        sb.append("]");
         return sb.toString();
     }
 

@@ -21,6 +21,12 @@ package org.hellojavaer.fatjar.core;
  */
 class Logger {
 
+    static {
+        if (FatJarSystemConfig.getLogLevel() >= 3) {
+            System.out.println("DEBUG: [FatJar] -| Logger is loaded by " + Logger.class.getClassLoader());
+        }
+    }
+
     public boolean isErrorEnabled() {
         if (FatJarSystemConfig.getLogLevel() >= 0) {
             return true;
@@ -69,4 +75,15 @@ class Logger {
         System.out.println("DEBUG: [FatJar] -| " + msg);
     }
 
+    public boolean isTraceEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 4) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void trace(String msg) {
+        System.out.println("TRACE: [FatJar] -| " + msg);
+    }
 }

@@ -25,15 +25,14 @@ import java.lang.reflect.Method;
 class MainEntry {
 
     static {
-        System.out.println("MainEntry is loaded by " + MainEntry.class.getClassLoader());
+        System.out.println("INFO: [FatJar] -| MainEntry is loaded by " + MainEntry.class.getClassLoader());
     }
 
-    public static void invoke(String className, String[] args)
-            throws ClassNotFoundException, InvocationTargetException, IllegalAccessException, NoSuchMethodException,
-                   InstantiationException {
+    public static void invoke(String className, String[] args) throws ClassNotFoundException,
+                                                              InvocationTargetException, IllegalAccessException,
+                                                              NoSuchMethodException, InstantiationException {
         Class startClass = Class.forName(className);
         Method method = startClass.getMethod("main", String[].class);
-        System.out.println(method.toString());
-        method.invoke(null, (Object)args);
+        method.invoke(null, (Object) args);
     }
 }

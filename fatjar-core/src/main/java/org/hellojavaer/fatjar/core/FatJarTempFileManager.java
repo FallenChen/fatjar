@@ -41,6 +41,9 @@ class FatJarTempFileManager {
     private static final ConcurrentHashMap<String, Object>      lockMap               = new ConcurrentHashMap<>();
 
     static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarTempFileManager is loaded by " + FatJarTempFileManager.class.getClassLoader());
+        }
         //
         Class<?> clazz = FileWrapper.class;
         //
@@ -79,7 +82,7 @@ class FatJarTempFileManager {
         }
         if (tag.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
-                logger.info(String.format("fatjar temporary direcotry is at %s",
+                logger.info(String.format("[createTempDir] temporary direcotry is at %s",
                                           createdTempDir.getAbsolutePath()));
             }
         }
@@ -105,15 +108,13 @@ class FatJarTempFileManager {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
-                        logger.info(String.format("+ %s | created a new temp file in %s", key,
-                                                  file.getAbsolutePath()));
+                        logger.info(String.format("+ %s | created a new temp file in %s", key, file.getAbsolutePath()));
                     }
                 }
             } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("+ %s | created a new temp file in %s", key,
-                                              file.getAbsolutePath()));
+                    logger.info(String.format("+ %s | created a new temp file in %s", key, file.getAbsolutePath()));
                 }
             }
             FileOutputStream tempOut = new FileOutputStream(file);

@@ -26,10 +26,13 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
- *
+ * rewrite protocol jar, but not rewrite protocol file 
+ * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
 class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
+
+    private static final Logger     logger        = new Logger();
 
     private static final String     SEPARATOR     = "!/";
 
@@ -38,6 +41,13 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
     private static final String     JAR_PROTOCOL  = "jar:";
 
     private URLStreamHandlerFactory oldURLStreamHandlerFactory;
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FarJarURLStreamHandlerFactory is loaded by "
+                         + FarJarURLStreamHandlerFactory.class.getClassLoader());
+        }
+    }
 
     public FarJarURLStreamHandlerFactory() {
     }

@@ -34,6 +34,9 @@ public class FatJarClassLoaderUtils {
     private static boolean registeredURLHandler = false;
 
     static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarClassLoaderUtils is loaded by " + FatJarClassLoaderUtils.class.getClassLoader());
+        }
         FatJarTempFileManager.initTempFileDir();
     }
 
@@ -96,13 +99,11 @@ public class FatJarClassLoaderUtils {
                         field.setBoolean(classLoader, true);
                     }
                     if (logger.isInfoEnabled() && b == false) {
-                        logger.info("ClassLoader:[" + classLoader
-                                    + "]'s field delegate value is false and has been set true");
-                    }
-                    if (logger.isDebugEnabled()) {
-                        printStackTrace(Thread.currentThread().getStackTrace(),
-                                        "ClassLoader:[" + classLoader
-                                                + "]'s field delegate value is false and has been set true");
+                        logger.info("[getAndResetDelegate] In ClassLoader:[" + classLoader
+                                    + "], the value of field delegate is false and has been set true");
+                        if (logger.isTraceEnabled()) {
+                            printStackTrace(Thread.currentThread().getStackTrace());
+                        }
                     }
                     return b;
                 }
@@ -119,13 +120,11 @@ public class FatJarClassLoaderUtils {
                     setter.invoke(classLoader, Boolean.TRUE);
                 }
                 if (logger.isInfoEnabled() && b == false) {
-                    logger.info("ClassLoader:[" + classLoader
-                                + "]'s method getDelegate return value is false and has been set true");
-                }
-                if (logger.isDebugEnabled()) {
-                    printStackTrace(Thread.currentThread().getStackTrace(),
-                                    "ClassLoader:[" + classLoader
-                                            + "]'s method getDelegate value is false and has been set true");
+                    logger.info("[getAndResetDelegate] In ClassLoader:[" + classLoader
+                                + "], the value of method getDelegate is false and has been set true");
+                    if (logger.isTraceEnabled()) {
+                        printStackTrace(Thread.currentThread().getStackTrace());
+                    }
                 }
                 return b;
             } catch (Exception e) {
@@ -189,24 +188,21 @@ public class FatJarClassLoaderUtils {
     private static ClassLoader securitCheck(ClassLoader targetClassLoader) {
         if (targetClassLoader instanceof FatJarClassLoaderProxy || targetClassLoader instanceof FatJarClassLoader) {
             if (logger.isInfoEnabled()) {
-                logger.info(targetClassLoader.getClass().getName() + " can't be inject");
-            }
-            if (logger.isDebugEnabled()) {
-                printStackTrace(Thread.currentThread().getStackTrace(), targetClassLoader.getClass().getName()
-                                                                        + " can't be inject");
+                logger.info("targetClassLoader:[" + targetClassLoader.getClass().getName() + "] can't be inject");
+                if (logger.isTraceEnabled()) {
+                    printStackTrace(Thread.currentThread().getStackTrace());
+                }
             }
             throw new IllegalStateException(targetClassLoader + " can't be inject");
         } else {
             ClassLoader parent0 = targetClassLoader.getParent();
             if (parent0 != null && (parent0 instanceof FatJarClassLoaderProxy || parent0 instanceof FatJarClassLoader)) {
                 if (logger.isInfoEnabled()) {
-                    logger.info("targetClassLoader:" + targetClassLoader + " has been injected:" + parent0.toString()
-                                + " .It can't been injected again.");
-                }
-                if (logger.isDebugEnabled()) {
-                    printStackTrace(Thread.currentThread().getStackTrace(),
-                                    "targetClassLoader:" + targetClassLoader + " has been injected:"
-                                            + parent0.toString() + " .It can't been injected again.");
+                    logger.info("targetClassLoader:[" + targetClassLoader + "] has been injected ClassLoader:["
+                                + parent0.toString() + "]. It can't been injected again.");
+                    if (logger.isTraceEnabled()) {
+                        printStackTrace(Thread.currentThread().getStackTrace());
+                    }
                 }
                 return parent0;
             }
@@ -214,8 +210,8 @@ public class FatJarClassLoaderUtils {
         return null;
     }
 
-    private static void printStackTrace(StackTraceElement[] stackTraceElements, String msg) {
-        System.out.println("inject stack trace:" + msg);
+    private static void printStackTrace(StackTraceElement[] stackTraceElements) {
+        System.out.println("[FatJar] stack trace:");
         if (stackTraceElements != null) {
             for (StackTraceElement stackTraceElement : stackTraceElements) {
                 System.out.println(stackTraceElement);
@@ -233,12 +229,11 @@ public class FatJarClassLoaderUtils {
                 nameField.setAccessible(true);
                 nameField.set(targetClassLoader, newParent);
                 if (logger.isInfoEnabled()) {
-                    logger.info(targetClassLoader + "'s parent:" + oldParent + " has been replaced with " + newParent);
-                }
-                if (logger.isDebugEnabled()) {
-                    printStackTrace(Thread.currentThread().getStackTrace(), targetClassLoader + "'s parent:"
-                                                                            + oldParent + " has been replaced with "
-                                                                            + newParent);
+                    logger.info("[replaceParent] ClassLoader:[" + targetClassLoader + "]'s parent:[" + oldParent
+                                + "] has been replaced with [" + newParent + "]");
+                    if (logger.isTraceEnabled()) {
+                        printStackTrace(Thread.currentThread().getStackTrace());
+                    }
                 }
                 return;
             } catch (Exception e) {
@@ -262,13 +257,16 @@ public class FatJarClassLoaderUtils {
                             URLStreamHandlerFactory old = (URLStreamHandlerFactory) factoryField.get(null);
                             factoryField.set(null, new FarJarURLStreamHandlerFactory(old));
                         } catch (NoSuchFieldException e0) {
-                            throw new Error("Could not access factory field on URL class", e0);
+                            throw new Error("Could not access field factory in class URL", e0);
                         } catch (IllegalAccessException e1) {
-                            throw new Error("Could not access factory field on URL class", e1);
+                            throw new Error("Could not access field factory in class URL", e1);
                         }
                     }
                     if (logger.isInfoEnabled()) {
-                        logger.info("register UrlProtocolHandler success");
+                        logger.info("[registerUrlProtocolHandler] register success");
+                        if (logger.isTraceEnabled()) {
+                            printStackTrace(Thread.currentThread().getStackTrace());
+                        }
                     }
                     registeredURLHandler = true;
                 }

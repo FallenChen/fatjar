@@ -65,10 +65,26 @@ public class FatJarMojo extends AbstractMojo {
     @Parameter(defaultValue = "", property = "startClass", required = false)
     private String                 startClass;
 
+    @Parameter(defaultValue = "", property = "mainClass", required = false)
+    private String                 mainClass;
+
     @Parameter(defaultValue = "lib/", property = "libDirectory", required = false)
     private String                 libDirectory;
 
     public void execute() throws MojoExecutionException {
+        if (startClass != null) {
+            startClass = startClass.trim();
+            if (startClass.length() == 0) {
+                startClass = null;
+            }
+        }
+        if (mainClass != null) {
+            mainClass = mainClass.trim();
+            if (mainClass.length() == 0) {
+                mainClass = null;
+            }
+        }
+
         if (artifacts == null || artifacts.isEmpty() || dependencies == null || dependencies.isEmpty()) {
             throw new MojoExecutionException("Dependency can't be empty when building fatjar");
         }
@@ -96,15 +112,13 @@ public class FatJarMojo extends AbstractMojo {
                                                                      + " but there are multiple direct dependencies match this condition.");
                         }
                     }
-                    isSkip = true;
+                    if (startClass == null) {
+                        isSkip = true;
+                    }
                     break;
                 }
             }
             if (isSkip) {
-                continue;
-            }
-            if (artifact.getGroupId().equals("org.hellojavaer.fatjar")//
-                && artifact.getArtifactId().startsWith("fatjar-core")) {//
                 continue;
             }
             Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
@@ -137,11 +151,10 @@ public class FatJarMojo extends AbstractMojo {
             }
             attributes.putValue(FAT_JAR_VERSION_KEY, FAT_JAR_VERSION);
             if (startClass != null) {
-                startClass = startClass.trim();
-                if (startClass.length() > 0) {
-                    attributes.putValue(START_CLASS_KEY, startClass);
-                    attributes.putValue(MAIN_CLASS_KEY, "org.hellojavaer.fatjar.core.boot.Main");
-                }
+                attributes.putValue(START_CLASS_KEY, startClass);
+            }
+            if (mainClass != null) {
+                attributes.putValue(MAIN_CLASS_KEY, mainClass);
             }
 
             // 1.create output file
