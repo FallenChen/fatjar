@@ -34,9 +34,7 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
- * 
- * FatJarClassLoader classload is based on a fatjar 
- * 
+ *
  * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 18/03/2017.
  */
@@ -74,7 +72,7 @@ public class FatJarClassLoader extends URLClassLoader {
         if (logger.isDebugEnabled()) {
             logger.debug("FatJarClassLoader is loaded by " + FatJarClassLoader.class.getClassLoader());
         }
-        // 0. force the classload which loaded FatJarClassLoader to load this following directly dependency classes
+        // 0. force the classload which loaded FatJarClassLoader to load the following directly dependency classes
         Class<?> temp = ResourceEntry.class;
         temp = FatJarSystemConfig.class;
         temp = FatJarTempFileManager.class;
