@@ -61,19 +61,13 @@ public class FatJarClassLoaderUtils {
             } else {
                 fatJarClassPaths = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
             }
-            Boolean delegate = FatJarSystemConfig.loadDelegate();
-            if (delegate == null) {
-                delegate = FatJarClassLoaderProxy.DEFAULT_DELEGATE;
-            }
-            Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
-            if (nestedDelegate == null) {
-                nestedDelegate = FatJarClassLoaderProxy.DEFAULT_NESTED_DELEGATE;
-            }
-            //
+
+            boolean delegate = false;
+            boolean nestedDelegate = false;
             Boolean childDelegate = getAndResetDelegate(targetClassLoader);
             if (childDelegate != null) {
                 nestedDelegate = childDelegate;
-                delegate = nestedDelegate;
+                delegate = childDelegate;
             }
             FatJarClassLoaderProxy fatJarClassLoaderProxy = new FatJarClassLoaderProxy(fatJarClassPaths,
                                                                                        targetClassLoader.getParent(),
@@ -246,7 +240,7 @@ public class FatJarClassLoaderUtils {
 
     public static void registerUrlProtocolHandler() {
         if (!registeredURLHandler) {
-            synchronized (FatJarClassLoaderUtils.class) {
+            synchronized (URL.class) {
                 if (!registeredURLHandler) {
                     try {
                         URL.setURLStreamHandlerFactory(new FarJarURLStreamHandlerFactory());
@@ -256,10 +250,10 @@ public class FatJarClassLoaderUtils {
                             factoryField.setAccessible(true);
                             URLStreamHandlerFactory old = (URLStreamHandlerFactory) factoryField.get(null);
                             factoryField.set(null, new FarJarURLStreamHandlerFactory(old));
-                        } catch (NoSuchFieldException e0) {
-                            throw new Error("Could not access field factory in class URL", e0);
                         } catch (IllegalAccessException e1) {
-                            throw new Error("Could not access field factory in class URL", e1);
+                            throw new RuntimeException(e1);
+                        } catch (NoSuchFieldException e1) {
+                            throw new RuntimeException(e1);
                         }
                     }
                     if (logger.isInfoEnabled()) {

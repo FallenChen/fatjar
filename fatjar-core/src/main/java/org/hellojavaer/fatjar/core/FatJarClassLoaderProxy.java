@@ -33,11 +33,8 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     private static final Logger     logger                  = new Logger();
 
-    static final boolean            DEFAULT_DELEGATE        = true;
-    static final boolean            DEFAULT_NESTED_DELEGATE = true;
-
-    private boolean                 delegate                = DEFAULT_DELEGATE;
-    private boolean                 nestedDelegate          = DEFAULT_NESTED_DELEGATE;
+    private boolean                 delegate                = true;
+    private boolean                 nestedDelegate          = true;
     private ClassLoader             child                   = null;
 
     private List<FatJarClassLoader> fatJarClassLoaders      = new ArrayList<>();
@@ -51,7 +48,6 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate,
                                   boolean nestedDelegate) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         this.delegate = delegate;
         this.nestedDelegate = nestedDelegate;
@@ -60,7 +56,6 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         this.delegate = delegate;
         init();
@@ -68,32 +63,18 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         init();
     }
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent) {
         super(urls, parent);
-        useSystemConfig();
         init();
     }
 
     public FatJarClassLoaderProxy(URL[] urls) {
         super(urls);
-        useSystemConfig();
         init();
-    }
-
-    private void useSystemConfig() {
-        Boolean deleaget = FatJarSystemConfig.loadDelegate();
-        if (deleaget != null) {
-            this.delegate = deleaget;
-        }
-        Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
-        if (nestedDelegate != null) {
-            this.nestedDelegate = nestedDelegate;
-        }
     }
 
     protected void init() {
