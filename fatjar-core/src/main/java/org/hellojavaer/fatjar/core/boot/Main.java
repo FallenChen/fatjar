@@ -54,9 +54,8 @@ public class Main {
         FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, classLoader.getParent(), classLoader,
                                                                     false, true);
         ClassLoader classLoader1 = FatJarClassLoaderUtils.injectFatJarClassLoader(classLoader, fatJarClassLoader);
-        Class<?> mainClazz = classLoader1.loadClass("org.hellojavaer.fatjar.core.boot.MainEntry");
-        Method invokeMethod = mainClazz.getMethod("invoke", String.class, String[].class);
-        invokeMethod.setAccessible(true);
-        invokeMethod.invoke(null, startClass, args);
+        Class<?> mainClazz = Class.forName(startClass, true, classLoader1);
+        Method invokeMethod = mainClazz.getMethod("main", String[].class);
+        invokeMethod.invoke(null, (Object) args);
     }
 }

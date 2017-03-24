@@ -504,8 +504,7 @@ public class FatJarClassLoader extends URLClassLoader {
     }
 
     protected boolean filterResource(String name) {
-        if (!"org/hellojavaer/fatjar/core/boot/MainEntry.class".equals(name)
-            && name.startsWith("org/hellojavaer/fatjar/core/")) {
+        if (name.startsWith("org/hellojavaer/fatjar/core/")) {
             return true;
         } else {
             return false;
