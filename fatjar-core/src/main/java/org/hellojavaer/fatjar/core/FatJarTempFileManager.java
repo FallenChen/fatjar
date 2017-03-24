@@ -101,10 +101,9 @@ class FatJarTempFileManager {
                 return jarFile;
             }
             File file = null;
-            String encodeFileName = URLEncoder.encode(key, "UTF-8");
-            file = new File(createdTempDir, encodeFileName);
+            file = new File(createdTempDir, fileName);
             if (file.exists()) {
-                if (encodeFileName.toLowerCase().endsWith("-snapshot.jar")) {
+                if (fileName.toLowerCase().endsWith("-snapshot.jar")) {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {

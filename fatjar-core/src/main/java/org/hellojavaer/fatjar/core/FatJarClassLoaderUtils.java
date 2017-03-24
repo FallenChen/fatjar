@@ -15,6 +15,7 @@
  */
 package org.hellojavaer.fatjar.core;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -291,10 +292,15 @@ public class FatJarClassLoaderUtils {
             int i = location.indexOf("!/");
             if (i == -1) {
                 if (location.toLowerCase().endsWith(".jar")) {
-                    try {
-                        return new URL(location.substring(0, location.lastIndexOf("/")));
-                    } catch (MalformedURLException e) {
-                        throw new RuntimeException(e);
+                    File file = new File(locationURL.getPath());
+                    if (file.isFile()) {
+                        try {
+                            return new URL(location.substring(0, location.lastIndexOf("/")));
+                        } catch (MalformedURLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        return locationURL;
                     }
                 } else {
                     return locationURL;
