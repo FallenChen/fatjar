@@ -319,9 +319,9 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2.0
-            ResourceEntry resourceEntry = findResourceInternal(name, name);
-            if (resourceEntry != null) {
-                return resourceEntry.getUrl();
+            resource = findResourceInternal(name, name);
+            if (resource != null) {
+                return resource.getUrl();
             }
             // 2.1
             for (FatJarClassLoader subClassLoader : getSubClassLoaders()) {
@@ -370,9 +370,9 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2.0
-            ResourceEntry resourceEntry = findResourceInternal(name, name);
-            if (resourceEntry != null) {
-                result.add(resourceEntry.getUrl());
+            ResourceEntry resource = findResourceInternal(name, name);
+            if (resource != null) {
+                result.add(resource.getUrl());
             }
             // 2.1
             for (FatJarClassLoader subClassLoader : getSubClassLoaders()) {
@@ -432,8 +432,8 @@ public class FatJarClassLoader extends URLClassLoader {
             }
 
             // 2.0
-            ResourceEntry resourceEntry = findResourceInternal(name, name);
-            if (resourceEntry != null) {
+            resource = findResourceInternal(name, name);
+            if (resource != null) {
                 return new ByteArrayInputStream(resource.getBytes());
             }
             // 2.1
