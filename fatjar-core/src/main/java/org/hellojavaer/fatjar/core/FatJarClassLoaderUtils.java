@@ -272,20 +272,9 @@ public class FatJarClassLoaderUtils {
         if (clazz == null) {
             return null;
         }
-        String classPath = clazz.getName().replace('.', '/') + ".class";
         CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
         if (codeSource != null) {
-            URL locationURL = codeSource.getLocation();
-            String location = locationURL.toString();
-            if (location.endsWith(classPath)) {
-                try {
-                    return new URL(location.substring(0, location.length() - classPath.length()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                return locationURL;
-            }
+            return codeSource.getLocation();
         } else {
             return null;
         }
@@ -295,29 +284,20 @@ public class FatJarClassLoaderUtils {
         if (clazz == null) {
             return null;
         }
-        String classPath = clazz.getName().replace('.', '/') + ".class";
         CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
         if (codeSource != null) {
             URL locationURL = codeSource.getLocation();
             String location = locationURL.toString();
             int i = location.indexOf("!/");
             if (i == -1) {
-                if (location.endsWith(classPath)) {
+                if (location.toLowerCase().endsWith(".jar")) {
                     try {
-                        return new URL(location.substring(0, location.length() - classPath.length()));
-                    } catch (Exception e) {
+                        return new URL(location.substring(0, location.lastIndexOf("/")));
+                    } catch (MalformedURLException e) {
                         throw new RuntimeException(e);
                     }
                 } else {
-                    if (location.endsWith(".jar")) {
-                        try {
-                            return new URL(location.substring(0, location.lastIndexOf("/")));
-                        } catch (MalformedURLException e) {
-                            throw new RuntimeException(e);
-                        }
-                    } else {
-                        return locationURL;
-                    }
+                    return locationURL;
                 }
             } else {
                 try {
@@ -330,4 +310,5 @@ public class FatJarClassLoaderUtils {
             return null;
         }
     }
+
 }
