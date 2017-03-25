@@ -277,9 +277,9 @@ public class FatJarClassLoaderUtils {
                         Map handlers = (Map) field.get(URL.class);
                         handlers.put("jar", new FatJarURLStreamHandler());
                     } catch (NoSuchFieldException e) {
-                        throw new RuntimeException("[injectFatJarUrlProtocolHandler] inject failed", e);
+                        throw new RuntimeException("inject FatJarUrlProtocolHandler failed", e);
                     } catch (IllegalAccessException e) {
-                        throw new RuntimeException("[injectFatJarUrlProtocolHandler] inject failed.", e);
+                        throw new RuntimeException("inject FatJarUrlProtocolHandler failed.", e);
                     }
                     if (logger.isInfoEnabled()) {
                         logger.info("[injectFatJarUrlProtocolHandler] inject success");
