@@ -16,11 +16,17 @@
 package org.hellojavaer.fatjar.core;
 
 import java.io.*;
-import java.net.*;
+import java.net.JarURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.security.cert.Certificate;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.jar.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 /**
  * rewrite protocol jar, but not rewrite protocol file 
@@ -99,7 +105,7 @@ class FatJarURLStreamHandler extends URLStreamHandler {
 
                         // do check
                         String[] pathSections = fileString.split(SEPARATOR);
-                        if (fileString.endsWith("!/")) {
+                        if (fileString.endsWith(SEPARATOR)) {
                             throw new IOException("no entry name specified");
                         }
                         if (pathSections.length == 1) {
