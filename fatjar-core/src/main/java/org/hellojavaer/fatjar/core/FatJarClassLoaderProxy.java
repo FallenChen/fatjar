@@ -103,7 +103,7 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     private List<File> listJarFiles(URL url) {
         List<File> jarFiles = new ArrayList<>();
-        File filePath = new File(url.getPath());
+        File filePath = new File(url.getFile());
         listJarFiles0(jarFiles, filePath);
         return jarFiles;
     }

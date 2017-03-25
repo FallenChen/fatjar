@@ -378,7 +378,7 @@ public class FatJarClassLoaderUtils {
             int i = location.indexOf("!/");
             if (i == -1) {
                 if (location.toLowerCase().endsWith(".jar")) {
-                    File file = new File(locationURL.getPath());
+                    File file = new File(locationURL.getFile());
                     if (file.isFile()) {
                         try {
                             return new URL(location.substring(0, location.lastIndexOf("/")));
