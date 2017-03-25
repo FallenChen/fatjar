@@ -23,6 +23,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLStreamHandlerFactory;
 import java.security.CodeSource;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -34,10 +36,35 @@ public class FatJarClassLoaderUtils {
 
     private static boolean registeredURLHandler = false;
 
+    private static URL[]   systemClassPaths;
+
     static {
         if (logger.isDebugEnabled()) {
             logger.debug("FatJarClassLoaderUtils is loaded by " + FatJarClassLoaderUtils.class.getClassLoader());
         }
+        //
+        String classPath = System.getProperty("java.class.path");
+        if (classPath != null) {
+            String pathSeparator = System.getProperty("path.separator");
+            String[] classPathArray = classPath.split(pathSeparator);
+            List<URL> urls = new ArrayList<>();
+            for (String item : classPathArray) {
+                String filePath = item;
+                if (item.equals(".")) {
+                    filePath = System.getProperty("user.dir");
+                }
+                try {
+                    File file = new File(filePath);
+                    if (file.exists()) {
+                        urls.add(file.toURI().toURL());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            systemClassPaths = urls.toArray(new URL[urls.size()]);
+        }
+        //
         FatJarTempFileManager.initTempFileDir();
     }
 
@@ -60,7 +87,8 @@ public class FatJarClassLoaderUtils {
             if (targetClassLoader instanceof URLClassLoader) {
                 fatJarClassPaths = ((URLClassLoader) targetClassLoader).getURLs();
             } else {
-                fatJarClassPaths = new URL[] { getBasePath(FatJarClassLoaderUtils.class) };
+                // use system classpath
+                fatJarClassPaths = systemClassPaths;
             }
 
             boolean delegate = false;
@@ -269,7 +297,7 @@ public class FatJarClassLoaderUtils {
         }
     }
 
-    public static URL getBasePath(Class clazz) {
+    public static URL getLocatoin(Class clazz) {
         if (clazz == null) {
             return null;
         }
@@ -281,7 +309,30 @@ public class FatJarClassLoaderUtils {
         }
     }
 
-    public static URL getBaseDirectry(Class clazz) {
+    public static URL getBaseLocatoin(Class clazz) {
+        if (clazz == null) {
+            return null;
+        }
+        CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
+        if (codeSource != null) {
+            URL locationURL = codeSource.getLocation();
+            String location = locationURL.toString();
+            int i = location.indexOf("!/");
+            if (i == -1) {
+                return locationURL;
+            } else {
+                try {
+                    return new URL(location.substring(0, i));
+                } catch (MalformedURLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        } else {
+            return null;
+        }
+    }
+
+    public static URL getBaseDirecotry(Class clazz) {
         if (clazz == null) {
             return null;
         }

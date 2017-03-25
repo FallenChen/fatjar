@@ -41,7 +41,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchMethodException,
                                           InvocationTargetException, IllegalAccessException {
-        URL url = FatJarClassLoaderUtils.getBasePath(Main.class);
+        URL url = FatJarClassLoaderUtils.getLocatoin(Main.class);
         File fatJarFile = new File(url.getPath());
         JarFile jar = new JarFile(fatJarFile);
         Manifest manifest = jar.getManifest();
