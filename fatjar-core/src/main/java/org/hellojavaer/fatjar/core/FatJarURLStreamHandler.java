@@ -34,7 +34,7 @@ import java.util.jar.Manifest;
  *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
-class FatJarURLStreamHandler extends sun.net.www.protocol.jar.Handler {
+class FatJarURLStreamHandler extends URLStreamHandler {
 
     private static final Logger logger                   = new Logger();
 
