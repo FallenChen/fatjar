@@ -31,20 +31,18 @@ import java.util.jar.Manifest;
 
 /**
  * rewrite protocol jar, but not rewrite protocol file 
- * 
+ *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
 class FatJarURLStreamHandler extends URLStreamHandler {
 
-    private static final Logger logger                = new Logger();
+    private static final Logger logger                   = new Logger();
 
-    private static final String SEPARATOR             = "!/";
+    private static final String SEPARATOR                = "!/";
 
-    private static final String FILE_PROTOCOL         = "file:";
+    private static final String FILE_PROTOCOL            = "file:";
 
-    private static final String JAR_PROTOCOL          = "jar:";
-
-    private URLStreamHandler    olderURLStreamHandler = null;
+    private URLStreamHandler    fallbackURLStreamHandler = null;
 
     static {
         if (logger.isDebugEnabled()) {
@@ -58,16 +56,16 @@ class FatJarURLStreamHandler extends URLStreamHandler {
     }
 
     public FatJarURLStreamHandler(URLStreamHandler olderURLStreamHandler) {
-        this.olderURLStreamHandler = olderURLStreamHandler;
+        this.fallbackURLStreamHandler = olderURLStreamHandler;
     }
 
     @Override
     protected URLConnection openConnection(URL u) throws IOException {
-        if (olderURLStreamHandler != null && !isSupport(u)) {
-            Method method = FatJarReflectionUtils.getMethod(olderURLStreamHandler.getClass(), "openConnection",
+        if (fallbackURLStreamHandler != null && !isSupported(u)) {
+            Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "openConnection",
                                                             URL.class);
             try {
-                return (URLConnection) method.invoke(olderURLStreamHandler, u);
+                return (URLConnection) method.invoke(fallbackURLStreamHandler, u);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -78,11 +76,11 @@ class FatJarURLStreamHandler extends URLStreamHandler {
 
     @Override
     protected String toExternalForm(URL u) {
-        if (olderURLStreamHandler != null && !isSupport(u)) {
-            Method method = FatJarReflectionUtils.getMethod(olderURLStreamHandler.getClass(), "toExternalForm",
+        if (fallbackURLStreamHandler != null && !isSupported(u)) {
+            Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "toExternalForm",
                                                             URL.class);
             try {
-                return (String) method.invoke(olderURLStreamHandler, u);
+                return (String) method.invoke(fallbackURLStreamHandler, u);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -91,16 +89,12 @@ class FatJarURLStreamHandler extends URLStreamHandler {
         }
     }
 
-    protected boolean isSupport(URL url) {
+    protected boolean isSupported(URL url) {
         if (!url.getProtocol().toLowerCase().startsWith("jar") || url.getPath().endsWith("!/")) {
             return false;
         } else {
             return true;
         }
-    }
-
-    protected URLStreamHandler getOlderURLStreamHandler() {
-        return olderURLStreamHandler;
     }
 
     //
