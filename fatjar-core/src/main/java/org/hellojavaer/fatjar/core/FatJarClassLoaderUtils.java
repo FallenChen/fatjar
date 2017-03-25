@@ -282,8 +282,8 @@ public class FatJarClassLoaderUtils {
                         final Object lock = fieldOfStreamHandlerLock.get(URL.class);
 
                         synchronized (lock) {
-                            URLStreamHandler olderUrlStreamHandler = (URLStreamHandler) handlers.get("jar");
                             FatJarURLStreamHandler fatJarURLStreamHandler = null;
+                            URLStreamHandler olderUrlStreamHandler = (URLStreamHandler) handlers.get("jar");
                             if (olderUrlStreamHandler != null) {
                                 if (olderUrlStreamHandler instanceof FatJarURLStreamHandler) {
                                     logger.info("[injectFatJarUrlProtocolHandler] FatJarUrlProtocolHandler already injected. Can't reapeted inject");
@@ -295,19 +295,24 @@ public class FatJarClassLoaderUtils {
                                     fatJarURLStreamHandler = new FatJarURLStreamHandler(olderUrlStreamHandler);
                                 }
                             } else {
-                                Method methodOfGetURLStreamHandler = URL.class.getDeclaredMethod("getURLStreamHandler",
-                                                                                                 String.class);// 3
-                                methodOfGetURLStreamHandler.setAccessible(true);
-                                URLStreamHandler urlStreamHandler = (URLStreamHandler) methodOfGetURLStreamHandler.invoke(URL.class,
-                                                                                                                          "jar");
-                                if (urlStreamHandler instanceof FatJarURLStreamHandler) {
-                                    logger.info("[injectFatJarUrlProtocolHandler] FatJarUrlProtocolHandler already injected. Can't reapeted inject");
-                                    if (logger.isTraceEnabled()) {
-                                        printStackTrace(Thread.currentThread().getStackTrace());
+                                try {
+                                    Method methodOfGetURLStreamHandler = URL.class.getDeclaredMethod("getURLStreamHandler",
+                                                                                                     String.class);// 3
+                                    methodOfGetURLStreamHandler.setAccessible(true);
+                                    URLStreamHandler urlStreamHandler = (URLStreamHandler) methodOfGetURLStreamHandler.invoke(URL.class,
+                                                                                                                              "jar");
+                                    if (urlStreamHandler != null && urlStreamHandler instanceof FatJarURLStreamHandler) {
+                                        logger.info("[injectFatJarUrlProtocolHandler] FatJarUrlProtocolHandler already injected. Can't reapeted inject");
+                                        if (logger.isTraceEnabled()) {
+                                            printStackTrace(Thread.currentThread().getStackTrace());
+                                        }
+                                        return;
+                                    } else {
+                                        fatJarURLStreamHandler = new FatJarURLStreamHandler(urlStreamHandler);
                                     }
-                                    return;
-                                } else {
-                                    fatJarURLStreamHandler = new FatJarURLStreamHandler(urlStreamHandler);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    fatJarURLStreamHandler = new FatJarURLStreamHandler();
                                 }
                             }
                             handlers.put("jar", fatJarURLStreamHandler);

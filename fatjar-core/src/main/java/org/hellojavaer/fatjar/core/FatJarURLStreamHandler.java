@@ -34,7 +34,7 @@ import java.util.jar.Manifest;
  *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
-class FatJarURLStreamHandler extends URLStreamHandler {
+class FatJarURLStreamHandler extends sun.net.www.protocol.jar.Handler {
 
     private static final Logger logger                   = new Logger();
 
@@ -55,49 +55,37 @@ class FatJarURLStreamHandler extends URLStreamHandler {
     public FatJarURLStreamHandler() {
     }
 
-    public FatJarURLStreamHandler(URLStreamHandler olderURLStreamHandler) {
-        this.fallbackURLStreamHandler = olderURLStreamHandler;
+    public FatJarURLStreamHandler(URLStreamHandler fallbackURLStreamHandler) {
+        this.fallbackURLStreamHandler = fallbackURLStreamHandler;
     }
 
     @Override
     protected URLConnection openConnection(URL u) throws IOException {
-        if (fallbackURLStreamHandler != null && !isSupported(u)) {
-            Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "openConnection",
-                                                            URL.class);
-            try {
-                return (URLConnection) method.invoke(fallbackURLStreamHandler, u);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else {
+        try {
             return new FatJarURLConnection(u);
-        }
-    }
-
-    @Override
-    protected String toExternalForm(URL u) {
-        if (fallbackURLStreamHandler != null && !isSupported(u)) {
-            Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "toExternalForm",
-                                                            URL.class);
-            try {
-                return (String) method.invoke(fallbackURLStreamHandler, u);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+        } catch (Exception e) {
+            if (fallbackURLStreamHandler != null) {
+                Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "openConnection",
+                                                                URL.class);
+                try {
+                    return (URLConnection) method.invoke(fallbackURLStreamHandler, u);
+                } catch (Exception e1) {
+                    if (e1 instanceof RuntimeException) {
+                        throw (RuntimeException) e1;
+                    } else {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } else {
+                if (e instanceof IOException || e instanceof RuntimeException) {
+                    throw e;
+                } else {
+                    throw new RuntimeException(e);
+                }
             }
-        } else {
-            return super.toExternalForm(u);
         }
     }
 
-    protected boolean isSupported(URL url) {
-        if (!url.getProtocol().toLowerCase().startsWith("jar") || url.getPath().endsWith("!/")) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    //
     private static class FatJarURLConnection extends JarURLConnection {
 
         private JarFile            jarFile;
@@ -113,6 +101,9 @@ class FatJarURLStreamHandler extends URLStreamHandler {
 
         protected FatJarURLConnection(URL url) throws IOException {
             super(url);
+            if (url.getFile().indexOf("!/") == -1) {
+                throw new NullPointerException("no !/ in spec");
+            }
         }
 
         @Override
@@ -136,21 +127,17 @@ class FatJarURLStreamHandler extends URLStreamHandler {
                             return;
                         }
 
-                        // do check
                         String[] pathSections = fileString.split(SEPARATOR);
-                        if (fileString.endsWith(SEPARATOR)) {
-                            throw new IOException("no entry name specified");
-                        }
-                        if (pathSections.length == 1) {
-                            throw new NullPointerException("no !/ in spec");
-                        }
-                        if (pathSections.length == 2) {// normal jar protocol
-                            this.normalJarUrl = true;
+                        String rootFileDir = pathSections[0].substring(FILE_PROTOCOL.length());
+                        if (fileString.endsWith("!/")) {
+                            this.entryName = null;
+                        } else {
+                            if (pathSections.length <= 2) {// normal jar protocol
+                                this.normalJarUrl = true;
+                            }
+                            this.entryName = pathSections[pathSections.length - 1];
                         }
 
-                        //
-                        String rootFileDir = pathSections[0].substring(FILE_PROTOCOL.length());
-                        this.entryName = pathSections[pathSections.length - 1];
                         JarFile jarFile = null;
                         if (!normalJarUrl) {//
                             jarFile = FatJarTempFileManager.getJarFile(fileString);
@@ -177,7 +164,9 @@ class FatJarURLStreamHandler extends URLStreamHandler {
                         }
                         this.jarFile = jarFile;
                         this.manifest = jarFile.getManifest();
-                        this.jarEntry = jarFile.getJarEntry(entryName);
+                        if (this.entryName != null) {
+                            this.jarEntry = jarFile.getJarEntry(entryName);
+                        }
                         //
                         this.connected = true;
                     }
@@ -188,7 +177,11 @@ class FatJarURLStreamHandler extends URLStreamHandler {
         @Override
         public InputStream getInputStream() throws IOException {
             connect();
-            return new JarURLInputStream(getJarFile().getInputStream(getJarEntry()));
+            if (this.entryName == null) {
+                throw new IOException("no entry name specified");
+            } else {
+                return new JarURLInputStream(getJarFile().getInputStream(getJarEntry()));
+            }
         }
 
         @Override
