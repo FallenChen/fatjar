@@ -32,7 +32,7 @@ class FatJarTempFileManager {
 
     private static final String                                 FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
     private static Logger                                       logger                = new Logger();
-    private static String                                       tempDir;
+    private static String                                       tempDir               = System.getProperty("user.home");
     private static volatile File                                createdTempDir;
 
     // key:'file:/a/b.jar!/c/d.jar'
@@ -47,7 +47,10 @@ class FatJarTempFileManager {
         //
         Class<?> clazz = FileWrapper.class;
         //
-        tempDir = FatJarSystemConfig.getTempDir();
+        String userDefinedTempDir = FatJarSystemConfig.getTempDir();
+        if (userDefinedTempDir != null) {
+            tempDir = userDefinedTempDir;
+        }
     }
 
     public static String getTempDir() {
@@ -64,11 +67,7 @@ class FatJarTempFileManager {
         if (createdTempDir == null) {
             synchronized (FatJarTempFileManager.class) {
                 if (createdTempDir == null) {
-                    String actPath = tempDir;
-                    if (tempDir == null) {
-                        actPath = FatJarClassLoaderUtils.getBaseDirectry(FatJarTempFileManager.class).getPath()
-                                  + FATJAR_TEMP_FILE_PATH;
-                    }
+                    String actPath = tempDir + FATJAR_TEMP_FILE_PATH;
                     createdTempDir = new File(actPath);
                     if (!createdTempDir.exists()) {
                         createdTempDir.mkdirs();
@@ -88,11 +87,11 @@ class FatJarTempFileManager {
         }
     }
 
-    public static JarFile buildJarFile(String key, String fileName, InputStream inputStream) throws IOException {
+    public static JarFile buildJarFile(String url, InputStream inputStream) throws IOException {
         initTempFileDir();
-        fileName = URLEncoder.encode(fileName, "UTF-8");
-        synchronized (getLockObject(key)) {
-            FileWrapper fileWrapper = map.get(key);
+        String fileName = URLEncoder.encode(url, "UTF-8");
+        synchronized (getLockObject(url)) {
+            FileWrapper fileWrapper = map.get(url);
             JarFile jarFile = null;
             if (fileWrapper != null) {
                 jarFile = fileWrapper.getJarFile();
@@ -107,13 +106,13 @@ class FatJarTempFileManager {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
-                        logger.info(String.format("+ %s | created a new temp file in %s", key, file.getAbsolutePath()));
+                        logger.info(String.format("+ %s | created a new temp file in %s", url, file.getAbsolutePath()));
                     }
-                }
+                }// else use exsit file
             } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("+ %s | created a new temp file in %s", key, file.getAbsolutePath()));
+                    logger.info(String.format("+ %s | created a new temp file in %s", url, file.getAbsolutePath()));
                 }
             }
             FileOutputStream tempOut = new FileOutputStream(file);
@@ -123,7 +122,7 @@ class FatJarTempFileManager {
                 tempOut.write(buffer, 0, n);
             }
             jarFile = new JarFile(file);
-            map.put(key, new FileWrapper(file, jarFile));
+            map.put(url, new FileWrapper(file, jarFile));
             return jarFile;
         }
     }

@@ -153,7 +153,7 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
                                     notFoundResources.add(tempPath);
                                     return;
                                 } else {
-                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath, entryName0,
+                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath,
                                                                                  jarFile.getInputStream(jarEntry));
                                 }
                             }

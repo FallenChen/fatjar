@@ -139,7 +139,6 @@ public class FatJarClassLoader extends URLClassLoader {
                                     InputStream inputStream = fatJar.getInputStream(jarEntry);
                                     URL nestedJarURL = new URL(getURL().toString() + SEPARATOR + jarEntry.getName());
                                     JarFile nestedJarFile = FatJarTempFileManager.buildJarFile(nestedJarURL.toString(),
-                                                                                               jarEntry.getName(),
                                                                                                inputStream);
                                     Manifest manifest = nestedJarFile.getManifest();
                                     if (isFatJar(manifest)) {
