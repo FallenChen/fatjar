@@ -16,7 +16,11 @@
 package org.hellojavaer.fatjar.core;
 
 import java.io.*;
-import java.net.*;
+import java.lang.reflect.Method;
+import java.net.JarURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.security.cert.Certificate;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,52 +30,59 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
+ * rewrite protocol jar, but not rewrite protocol file 
  *
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
-class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
+class FatJarURLStreamHandler extends URLStreamHandler {
 
-    private static final String     SEPARATOR     = "!/";
+    private static final Logger logger                   = new Logger();
 
-    private static final String     FILE_PROTOCOL = "file:";
+    private static final String SEPARATOR                = "!/";
 
-    private static final String     JAR_PROTOCOL  = "jar:";
+    private static final String FILE_PROTOCOL            = "file:";
 
-    private URLStreamHandlerFactory oldURLStreamHandlerFactory;
+    private URLStreamHandler    fallbackURLStreamHandler = null;
 
-    public FarJarURLStreamHandlerFactory() {
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarURLStreamHandler is loaded by " + FatJarURLStreamHandler.class.getClassLoader());
+        }
+        //
+        Class<?> clazz = FatJarURLConnection.class;
     }
 
-    public FarJarURLStreamHandlerFactory(URLStreamHandlerFactory oldURLStreamHandlerFactory) {
-        this.oldURLStreamHandlerFactory = oldURLStreamHandlerFactory;
+    public FatJarURLStreamHandler() {
+    }
+
+    public FatJarURLStreamHandler(URLStreamHandler fallbackURLStreamHandler) {
+        this.fallbackURLStreamHandler = fallbackURLStreamHandler;
     }
 
     @Override
-    public URLStreamHandler createURLStreamHandler(String protocol) {
-        if ("jar".equals(protocol)) {
-            return new FatJarURLStreamHandler();
-        }
-        if (oldURLStreamHandlerFactory != null) {
-            return oldURLStreamHandlerFactory.createURLStreamHandler(protocol);
-        }
-        return null;
-    }
-
-    private class FatJarURLStreamHandler extends URLStreamHandler {
-
-        @Override
-        protected void parseURL(URL u, String spec, int start, int limit) {
-            if (!spec.toLowerCase().startsWith(JAR_PROTOCOL)) {
-                throw new IllegalArgumentException("only support protocol: jar for FatJarURLStreamHandler");
-            } else {
-                String file = spec.substring(JAR_PROTOCOL.length());
-                setURL(u, JAR_PROTOCOL, null, -1, null, null, file, null, null);
-            }
-        }
-
-        @Override
-        protected URLConnection openConnection(URL u) throws IOException {
+    protected URLConnection openConnection(URL u) throws IOException {
+        try {
             return new FatJarURLConnection(u);
+        } catch (Exception e) {
+            if (fallbackURLStreamHandler != null) {
+                Method method = FatJarReflectionUtils.getMethod(fallbackURLStreamHandler.getClass(), "openConnection",
+                                                                URL.class);
+                try {
+                    return (URLConnection) method.invoke(fallbackURLStreamHandler, u);
+                } catch (Exception e1) {
+                    if (e1 instanceof RuntimeException) {
+                        throw (RuntimeException) e1;
+                    } else {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } else {
+                if (e instanceof IOException || e instanceof RuntimeException) {
+                    throw e;
+                } else {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
@@ -84,8 +95,15 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
         private boolean            normalJarUrl;
         private static Set<String> notFoundResources = new HashSet<>();
 
+        static {
+            Class<?> clazz = JarURLInputStream.class;
+        }
+
         protected FatJarURLConnection(URL url) throws IOException {
             super(url);
+            if (url.getFile().indexOf("!/") == -1) {
+                throw new NullPointerException("no !/ in spec");
+            }
         }
 
         @Override
@@ -109,21 +127,17 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
                             return;
                         }
 
-                        // do check
                         String[] pathSections = fileString.split(SEPARATOR);
+                        String rootFileDir = pathSections[0].substring(FILE_PROTOCOL.length());
                         if (fileString.endsWith("!/")) {
-                            throw new IOException("no entry name specified");
-                        }
-                        if (pathSections.length == 1) {
-                            throw new NullPointerException("no !/ in spec");
-                        }
-                        if (pathSections.length == 2) {// normal jar protocol
-                            this.normalJarUrl = true;
+                            this.entryName = null;
+                        } else {
+                            if (pathSections.length <= 2) {// normal jar protocol
+                                this.normalJarUrl = true;
+                            }
+                            this.entryName = pathSections[pathSections.length - 1];
                         }
 
-                        //
-                        String rootFileDir = pathSections[0].substring(FILE_PROTOCOL.length());
-                        this.entryName = pathSections[pathSections.length - 1];
                         JarFile jarFile = null;
                         if (!normalJarUrl) {//
                             jarFile = FatJarTempFileManager.getJarFile(fileString);
@@ -143,14 +157,16 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
                                     notFoundResources.add(tempPath);
                                     return;
                                 } else {
-                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath, entryName0,
+                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath,
                                                                                  jarFile.getInputStream(jarEntry));
                                 }
                             }
                         }
                         this.jarFile = jarFile;
                         this.manifest = jarFile.getManifest();
-                        this.jarEntry = jarFile.getJarEntry(entryName);
+                        if (this.entryName != null) {
+                            this.jarEntry = jarFile.getJarEntry(entryName);
+                        }
                         //
                         this.connected = true;
                     }
@@ -161,7 +177,11 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
         @Override
         public InputStream getInputStream() throws IOException {
             connect();
-            return new JarURLInputStream(getJarFile().getInputStream(getJarEntry()));
+            if (this.entryName == null) {
+                throw new IOException("no entry name specified");
+            } else {
+                return new JarURLInputStream(getJarFile().getInputStream(getJarEntry()));
+            }
         }
 
         @Override

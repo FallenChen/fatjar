@@ -65,10 +65,26 @@ public class FatJarMojo extends AbstractMojo {
     @Parameter(defaultValue = "", property = "startClass", required = false)
     private String                 startClass;
 
+    @Parameter(defaultValue = "", property = "mainClass", required = false)
+    private String                 mainClass;
+
     @Parameter(defaultValue = "lib/", property = "libDirectory", required = false)
     private String                 libDirectory;
 
     public void execute() throws MojoExecutionException {
+        if (startClass != null) {
+            startClass = startClass.trim();
+            if (startClass.length() == 0) {
+                startClass = null;
+            }
+        }
+        if (mainClass != null) {
+            mainClass = mainClass.trim();
+            if (mainClass.length() == 0) {
+                mainClass = null;
+            }
+        }
+
         if (artifacts == null || artifacts.isEmpty() || dependencies == null || dependencies.isEmpty()) {
             throw new MojoExecutionException("Dependency can't be empty when building fatjar");
         }
@@ -82,44 +98,38 @@ public class FatJarMojo extends AbstractMojo {
         Map<Artifact, String> artifactMap = new LinkedHashMap<Artifact, String>();
         Map<String, Artifact> fileNameMap = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
-            boolean matched = false;
-            if (artifact.getGroupId().equals("org.hellojavaer.fatjar")
-                && artifact.getArtifactId().equals("fatjar-core")) {//
-                if (!artifact.isOptional() && !"provided".equals(artifact.getScope())) {
-                    throw new MojoExecutionException(
-                                                     "This pom referenced the dependency of fatjar-core when building fatjar,"
-                                                             + " in this case, the 'optional' of fatjar-core muse be true or the scope of fatjar-core must be 'provided.'");
-                }
-            }
+            boolean isSkip = false;
             for (Dependency dependency : dependencies) {//
                 if (dependency.getGroupId().equals(artifact.getGroupId())//
                     && dependency.getArtifactId().equals(artifact.getArtifactId())) {
-                    String dependencyDesc = dependency.toString();
-                    getLog().info("direct " + dependencyDesc);
                     if (dependency.isOptional()) {
                         if (directDependencyJarFile == null) {
                             directDependencyJarFile = artifact.getFile();
-                            matched = true;
-                            getLog().info("use " + dependencyDesc + " as main-dependency");
+                            getLog().info("use " + dependency.toString() + " as main-dependency");
                         } else {
                             throw new MojoExecutionException(
                                                              "fatjar-maven-plugin use the direct dependency which 'optional' is true as the main-dependency,"
                                                                      + " but there are multiple direct dependencies match this condition.");
                         }
                     }
+                    if (startClass == null) {
+                        isSkip = true;
+                    }
+                    break;
                 }
             }
-            if (matched == false) {
-                Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
-                if (artifact0 == null) {
-                    String fileName = artifact.getFile().getName();
-                    fileNameMap.put(fileName, artifact);
-                    artifactMap.put(artifact, fileName);
-                } else {
-                    String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
-                    fileNameMap.put(fullFileName, artifact);
-                    artifactMap.put(artifact, fullFileName);
-                }
+            if (isSkip) {
+                continue;
+            }
+            Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
+            if (artifact0 == null) {
+                String fileName = artifact.getFile().getName();
+                fileNameMap.put(fileName, artifact);
+                artifactMap.put(artifact, fileName);
+            } else {
+                String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
+                fileNameMap.put(fullFileName, artifact);
+                artifactMap.put(artifact, fullFileName);
             }
         }
         if (directDependencyJarFile == null) {
@@ -141,11 +151,10 @@ public class FatJarMojo extends AbstractMojo {
             }
             attributes.putValue(FAT_JAR_VERSION_KEY, FAT_JAR_VERSION);
             if (startClass != null) {
-                startClass = startClass.trim();
-                if (startClass.length() > 0) {
-                    attributes.putValue(START_CLASS_KEY, startClass);
-                    attributes.putValue(MAIN_CLASS_KEY, "org.hellojavaer.fatjar.core.boot.Main");
-                }
+                attributes.putValue(START_CLASS_KEY, startClass);
+            }
+            if (mainClass != null) {
+                attributes.putValue(MAIN_CLASS_KEY, mainClass);
             }
 
             // 1.create output file

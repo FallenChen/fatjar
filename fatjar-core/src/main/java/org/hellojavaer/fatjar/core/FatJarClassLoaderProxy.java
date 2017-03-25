@@ -31,19 +31,23 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoaderProxy extends URLClassLoader {
 
-    static final boolean            DEFAULT_DELEGATE        = true;
-    static final boolean            DEFAULT_NESTED_DELEGATE = true;
+    private static final Logger     logger                  = new Logger();
 
-    private boolean                 delegate                = DEFAULT_DELEGATE;
-    private boolean                 nestedDelegate          = DEFAULT_NESTED_DELEGATE;
+    private boolean                 delegate                = true;
+    private boolean                 nestedDelegate          = true;
     private ClassLoader             child                   = null;
 
     private List<FatJarClassLoader> fatJarClassLoaders      = new ArrayList<>();
 
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("FatJarClassLoaderProxy is loaded by " + FatJarClassLoaderProxy.class.getClassLoader());
+        }
+    }
+
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate,
                                   boolean nestedDelegate) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         this.delegate = delegate;
         this.nestedDelegate = nestedDelegate;
@@ -52,7 +56,6 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         this.delegate = delegate;
         init();
@@ -60,32 +63,18 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child) {
         super(urls, parent);
-        useSystemConfig();
         this.child = child;
         init();
     }
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent) {
         super(urls, parent);
-        useSystemConfig();
         init();
     }
 
     public FatJarClassLoaderProxy(URL[] urls) {
         super(urls);
-        useSystemConfig();
         init();
-    }
-
-    private void useSystemConfig() {
-        Boolean deleaget = FatJarSystemConfig.loadDelegate();
-        if (deleaget != null) {
-            this.delegate = deleaget;
-        }
-        Boolean nestedDelegate = FatJarSystemConfig.nestedLoadDelegate();
-        if (nestedDelegate != null) {
-            this.nestedDelegate = nestedDelegate;
-        }
     }
 
     protected void init() {
@@ -103,8 +92,7 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
                     Manifest manifest = jar.getManifest();
                     if (FatJarClassLoader.isFatJar(manifest)) {
                         URL filePath = jarFile.getCanonicalFile().toURI().toURL();
-                        fatJarClassLoaders.add(new FatJarClassLoader(jar, filePath, getParent(), child,
-                                                                     nestedDelegate));
+                        fatJarClassLoaders.add(new FatJarClassLoader(jar, filePath, getParent(), child, nestedDelegate));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -115,7 +103,7 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     private List<File> listJarFiles(URL url) {
         List<File> jarFiles = new ArrayList<>();
-        File filePath = new File(url.getPath());
+        File filePath = new File(url.getFile());
         listJarFiles0(jarFiles, filePath);
         return jarFiles;
     }
@@ -149,15 +137,19 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("[child:");
+        sb.append("[{child:");
         sb.append(child == null ? "null" : child.getClass().getName());
-        sb.append("]->[");
+        sb.append("}->{");
         sb.append("own:");
-        sb.append(super.getClass().getName());
-        sb.append("]->[");
+        sb.append(this.getClass().getName());
+        sb.append(",delegate:");
+        sb.append(delegate);
+        sb.append(",nestedDelegate:");
+        sb.append(nestedDelegate);
+        sb.append("}->{");
         sb.append("parent:");
         sb.append(getParent() == null ? "null" : getParent().getClass().getName());
-        sb.append("]");
+        sb.append("}]");
         return sb.toString();
     }
 

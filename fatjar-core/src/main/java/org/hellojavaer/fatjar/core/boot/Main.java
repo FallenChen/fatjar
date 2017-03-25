@@ -35,10 +35,14 @@ public class Main {
 
     private static String START_CLASS_KEY = "Start-Class";
 
+    static {
+        System.out.println("INFO: [FatJar] -| Main is loaded by " + Main.class.getClassLoader());
+    }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchMethodException,
                                           InvocationTargetException, IllegalAccessException {
-        URL url = FatJarClassLoaderUtils.getBasePath(Main.class);
-        File fatJarFile = new File(url.getPath());
+        URL url = FatJarClassLoaderUtils.getLocatoin(Main.class);
+        File fatJarFile = new File(url.getFile());
         JarFile jar = new JarFile(fatJarFile);
         Manifest manifest = jar.getManifest();
         Attributes attributes = manifest.getMainAttributes();
@@ -47,12 +51,11 @@ public class Main {
             throw new IllegalArgumentException(START_CLASS_KEY + " is missing");
         }
         ClassLoader classLoader = Main.class.getClassLoader();
-        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, classLoader.getParent(), classLoader, false,
-                                                                    true);
+        FatJarClassLoader fatJarClassLoader = new FatJarClassLoader(jar, url, classLoader.getParent(), classLoader,
+                                                                    false, true);
         ClassLoader classLoader1 = FatJarClassLoaderUtils.injectFatJarClassLoader(classLoader, fatJarClassLoader);
-        Class<?> mainClazz = classLoader1.loadClass("org.hellojavaer.fatjar.core.boot.MainEntry");
-        Method invokeMethod = mainClazz.getMethod("invoke", String.class, String[].class);
-        invokeMethod.setAccessible(true);
-        invokeMethod.invoke(null, startClass, args);
+        Class<?> mainClazz = Class.forName(startClass, true, classLoader1);
+        Method invokeMethod = mainClazz.getMethod("main", String[].class);
+        invokeMethod.invoke(null, (Object) args);
     }
 }

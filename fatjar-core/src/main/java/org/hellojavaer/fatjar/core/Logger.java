@@ -21,19 +21,69 @@ package org.hellojavaer.fatjar.core;
  */
 class Logger {
 
-    public boolean isInfoEnabled() {
-        return true;
+    static {
+        if (FatJarSystemConfig.getLogLevel() >= 3) {
+            System.out.println("DEBUG: [FatJar] -| Logger is loaded by " + Logger.class.getClassLoader());
+        }
     }
 
-    public void info(String msg) {
-        System.out.println(msg);
+    public boolean isErrorEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void error(String msg) {
+        System.out.println("ERROR: [FatJar] -| " + msg);
     }
 
     public boolean isWarnEnabled() {
-        return true;
+        if (FatJarSystemConfig.getLogLevel() >= 1) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public void warn(String msg) {
-        System.out.println(msg);
+        System.out.println("WARN: [FatJar] —| " + msg);
+    }
+
+    public boolean isInfoEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void info(String msg) {
+        System.out.println("INFO: [FatJar] -| " + msg);
+    }
+
+    public boolean isDebugEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 3) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void debug(String msg) {
+        System.out.println("DEBUG: [FatJar] -| " + msg);
+    }
+
+    public boolean isTraceEnabled() {
+        if (FatJarSystemConfig.getLogLevel() >= 4) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void trace(String msg) {
+        System.out.println("TRACE: [FatJar] -| " + msg);
     }
 }

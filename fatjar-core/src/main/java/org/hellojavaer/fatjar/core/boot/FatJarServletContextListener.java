@@ -24,6 +24,10 @@ import javax.servlet.ServletContextListener;
  */
 public class FatJarServletContextListener extends FatJarBoot implements ServletContextListener {
 
+    static {
+        System.out.println("INFO: [FatJar] -| FatJarServletContextListener is loaded by " + FatJarServletContextListener.class.getClassLoader());
+    }
+
     @Override
     public void contextInitialized(ServletContextEvent sce) {
 
