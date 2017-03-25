@@ -21,10 +21,10 @@ package org.hellojavaer.fatjar.core;
  */
 class FatJarSystemConfig {
 
-    private static final Logger logger              = new Logger();
+    private static final Logger logger            = new Logger();
 
-    private static final String TEMP_FILE_DIR_KEY   = "fatjar.temp.dir";
-    private static final String LOG_LEVEL_KEY       = "fatjar.log.level";
+    private static final String TEMP_FILE_DIR_KEY = "fatjar.temp.dir";
+    private static final String LOG_LEVEL_KEY     = "fatjar.log.level";
 
     static {
         if (logger.isDebugEnabled()) {

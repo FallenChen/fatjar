@@ -16,6 +16,7 @@
 package org.hellojavaer.fatjar.core;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -35,36 +36,74 @@ import java.util.jar.Manifest;
  */
 class FatJarURLStreamHandler extends URLStreamHandler {
 
-    private static final Logger logger        = new Logger();
+    private static final Logger logger                = new Logger();
 
-    private static final String SEPARATOR     = "!/";
+    private static final String SEPARATOR             = "!/";
 
-    private static final String FILE_PROTOCOL = "file:";
+    private static final String FILE_PROTOCOL         = "file:";
 
-    private static final String JAR_PROTOCOL  = "jar:";
+    private static final String JAR_PROTOCOL          = "jar:";
+
+    private URLStreamHandler    olderURLStreamHandler = null;
 
     static {
         if (logger.isDebugEnabled()) {
             logger.debug("FatJarURLStreamHandler is loaded by " + FatJarURLStreamHandler.class.getClassLoader());
         }
+        //
         Class<?> clazz = FatJarURLConnection.class;
     }
 
-    @Override
-    protected void parseURL(URL u, String spec, int start, int limit) {
-        if (!spec.toLowerCase().startsWith(JAR_PROTOCOL)) {
-            throw new IllegalArgumentException("only support protocol: jar for FatJarURLStreamHandler");
-        } else {
-            String file = spec.substring(JAR_PROTOCOL.length());
-            setURL(u, JAR_PROTOCOL, null, -1, null, null, file, null, null);
-        }
+    public FatJarURLStreamHandler() {
+    }
+
+    public FatJarURLStreamHandler(URLStreamHandler olderURLStreamHandler) {
+        this.olderURLStreamHandler = olderURLStreamHandler;
     }
 
     @Override
     protected URLConnection openConnection(URL u) throws IOException {
-        return new FatJarURLConnection(u);
+        if (olderURLStreamHandler != null && !isSupport(u)) {
+            Method method = FatJarReflectionUtils.getMethod(olderURLStreamHandler.getClass(), "openConnection",
+                                                            URL.class);
+            try {
+                return (URLConnection) method.invoke(olderURLStreamHandler, u);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            return new FatJarURLConnection(u);
+        }
     }
 
+    @Override
+    protected String toExternalForm(URL u) {
+        if (olderURLStreamHandler != null && !isSupport(u)) {
+            Method method = FatJarReflectionUtils.getMethod(olderURLStreamHandler.getClass(), "toExternalForm",
+                                                            URL.class);
+            try {
+                return (String) method.invoke(olderURLStreamHandler, u);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            return super.toExternalForm(u);
+        }
+    }
+
+    protected boolean isSupport(URL url) {
+        if (!url.getProtocol().toLowerCase().startsWith("jar") || url.getPath().endsWith("!/")) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    protected URLStreamHandler getOlderURLStreamHandler() {
+        return olderURLStreamHandler;
+    }
+
+    //
     private static class FatJarURLConnection extends JarURLConnection {
 
         private JarFile            jarFile;

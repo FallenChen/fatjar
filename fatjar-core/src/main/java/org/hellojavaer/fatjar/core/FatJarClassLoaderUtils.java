@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLStreamHandler;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.List;
@@ -269,17 +270,50 @@ public class FatJarClassLoaderUtils {
 
     public static void injectFatJarUrlProtocolHandler() {
         if (!injectedFatJarUrlProtocolHandler) {
-            synchronized (URL.class) {
+            synchronized (FatJarClassLoaderUtils.class) {
                 if (!injectedFatJarUrlProtocolHandler) {
                     try {
-                        Field field = URL.class.getDeclaredField("handlers");
-                        field.setAccessible(true);
-                        Map handlers = (Map) field.get(URL.class);
-                        handlers.put("jar", new FatJarURLStreamHandler());
-                    } catch (NoSuchFieldException e) {
+                        Field fieldOfHandlers = URL.class.getDeclaredField("handlers");// 1
+                        fieldOfHandlers.setAccessible(true);
+                        Map handlers = (Map) fieldOfHandlers.get(URL.class);
+
+                        Field fieldOfStreamHandlerLock = URL.class.getDeclaredField("streamHandlerLock");// 2
+                        fieldOfStreamHandlerLock.setAccessible(true);
+                        final Object lock = fieldOfStreamHandlerLock.get(URL.class);
+
+                        synchronized (lock) {
+                            URLStreamHandler olderUrlStreamHandler = (URLStreamHandler) handlers.get("jar");
+                            FatJarURLStreamHandler fatJarURLStreamHandler = null;
+                            if (olderUrlStreamHandler != null) {
+                                if (olderUrlStreamHandler instanceof FatJarURLStreamHandler) {
+                                    logger.info("[injectFatJarUrlProtocolHandler] FatJarUrlProtocolHandler already injected. Can't reapeted inject");
+                                    if (logger.isTraceEnabled()) {
+                                        printStackTrace(Thread.currentThread().getStackTrace());
+                                    }
+                                    return;
+                                } else {
+                                    fatJarURLStreamHandler = new FatJarURLStreamHandler(olderUrlStreamHandler);
+                                }
+                            } else {
+                                Method methodOfGetURLStreamHandler = URL.class.getDeclaredMethod("getURLStreamHandler",
+                                                                                                 String.class);// 3
+                                methodOfGetURLStreamHandler.setAccessible(true);
+                                URLStreamHandler urlStreamHandler = (URLStreamHandler) methodOfGetURLStreamHandler.invoke(URL.class,
+                                                                                                                          "jar");
+                                if (urlStreamHandler instanceof FatJarURLStreamHandler) {
+                                    logger.info("[injectFatJarUrlProtocolHandler] FatJarUrlProtocolHandler already injected. Can't reapeted inject");
+                                    if (logger.isTraceEnabled()) {
+                                        printStackTrace(Thread.currentThread().getStackTrace());
+                                    }
+                                    return;
+                                } else {
+                                    fatJarURLStreamHandler = new FatJarURLStreamHandler(urlStreamHandler);
+                                }
+                            }
+                            handlers.put("jar", fatJarURLStreamHandler);
+                        }
+                    } catch (Exception e) {
                         throw new RuntimeException("inject FatJarUrlProtocolHandler failed", e);
-                    } catch (IllegalAccessException e) {
-                        throw new RuntimeException("inject FatJarUrlProtocolHandler failed.", e);
                     }
                     if (logger.isInfoEnabled()) {
                         logger.info("[injectFatJarUrlProtocolHandler] inject success");
