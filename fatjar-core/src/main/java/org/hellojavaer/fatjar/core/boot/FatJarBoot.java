@@ -30,7 +30,7 @@ public class FatJarBoot {
         System.out.println("INFO: [FatJar] -| FatJarBoot is loaded by " + FatJarBoot.class.getClassLoader());
         //
         classLoader = FatJarClassLoaderUtils.injectFatJarClassLoaderProxy();
-        FatJarClassLoaderUtils.registerUrlProtocolHandler();
+        FatJarClassLoaderUtils.injectFatJarUrlProtocolHandler();
     }
 
     public static ClassLoader run() {

@@ -21,10 +21,10 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.URLStreamHandlerFactory;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -32,9 +32,9 @@ import java.util.List;
  */
 public class FatJarClassLoaderUtils {
 
-    private static Logger  logger               = new Logger();
+    private static Logger  logger                           = new Logger();
 
-    private static boolean registeredURLHandler = false;
+    private static boolean injectedFatJarUrlProtocolHandler = false;
 
     private static URL[]   systemClassPaths;
 
@@ -267,31 +267,27 @@ public class FatJarClassLoaderUtils {
                                         + targetClassLoader.getClass().getName());
     }
 
-    public static void registerUrlProtocolHandler() {
-        if (!registeredURLHandler) {
+    public static void injectFatJarUrlProtocolHandler() {
+        if (!injectedFatJarUrlProtocolHandler) {
             synchronized (URL.class) {
-                if (!registeredURLHandler) {
+                if (!injectedFatJarUrlProtocolHandler) {
                     try {
-                        URL.setURLStreamHandlerFactory(new FarJarURLStreamHandlerFactory());
-                    } catch (final Error e) {
-                        try {
-                            Field factoryField = URL.class.getDeclaredField("factory");
-                            factoryField.setAccessible(true);
-                            URLStreamHandlerFactory old = (URLStreamHandlerFactory) factoryField.get(null);
-                            factoryField.set(null, new FarJarURLStreamHandlerFactory(old));
-                        } catch (IllegalAccessException e1) {
-                            throw new RuntimeException(e1);
-                        } catch (NoSuchFieldException e1) {
-                            throw new RuntimeException(e1);
-                        }
+                        Field field = URL.class.getDeclaredField("handlers");
+                        field.setAccessible(true);
+                        Map handlers = (Map) field.get(URL.class);
+                        handlers.put("jar", new FatJarURLStreamHandler());
+                    } catch (NoSuchFieldException e) {
+                        throw new RuntimeException("[injectFatJarUrlProtocolHandler] inject failed", e);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException("[injectFatJarUrlProtocolHandler] inject failed.", e);
                     }
                     if (logger.isInfoEnabled()) {
-                        logger.info("[registerUrlProtocolHandler] register success");
+                        logger.info("[injectFatJarUrlProtocolHandler] inject success");
                         if (logger.isTraceEnabled()) {
                             printStackTrace(Thread.currentThread().getStackTrace());
                         }
                     }
-                    registeredURLHandler = true;
+                    injectedFatJarUrlProtocolHandler = true;
                 }
             }
         }

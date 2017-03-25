@@ -20,69 +20,43 @@ import java.net.*;
 import java.security.cert.Certificate;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
+import java.util.jar.*;
 
 /**
  * rewrite protocol jar, but not rewrite protocol file 
  * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 12/03/2017.
  */
-class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
+class FatJarURLStreamHandler extends URLStreamHandler {
 
-    private static final Logger     logger        = new Logger();
+    private static final Logger logger        = new Logger();
 
-    private static final String     SEPARATOR     = "!/";
+    private static final String SEPARATOR     = "!/";
 
-    private static final String     FILE_PROTOCOL = "file:";
+    private static final String FILE_PROTOCOL = "file:";
 
-    private static final String     JAR_PROTOCOL  = "jar:";
-
-    private URLStreamHandlerFactory oldURLStreamHandlerFactory;
+    private static final String JAR_PROTOCOL  = "jar:";
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("FarJarURLStreamHandlerFactory is loaded by "
-                         + FarJarURLStreamHandlerFactory.class.getClassLoader());
+            logger.debug("FatJarURLStreamHandler is loaded by " + FatJarURLStreamHandler.class.getClassLoader());
         }
-    }
-
-    public FarJarURLStreamHandlerFactory() {
-    }
-
-    public FarJarURLStreamHandlerFactory(URLStreamHandlerFactory oldURLStreamHandlerFactory) {
-        this.oldURLStreamHandlerFactory = oldURLStreamHandlerFactory;
+        Class<?> clazz = FatJarURLConnection.class;
     }
 
     @Override
-    public URLStreamHandler createURLStreamHandler(String protocol) {
-        if ("jar".equals(protocol)) {
-            return new FatJarURLStreamHandler();
+    protected void parseURL(URL u, String spec, int start, int limit) {
+        if (!spec.toLowerCase().startsWith(JAR_PROTOCOL)) {
+            throw new IllegalArgumentException("only support protocol: jar for FatJarURLStreamHandler");
+        } else {
+            String file = spec.substring(JAR_PROTOCOL.length());
+            setURL(u, JAR_PROTOCOL, null, -1, null, null, file, null, null);
         }
-        if (oldURLStreamHandlerFactory != null) {
-            return oldURLStreamHandlerFactory.createURLStreamHandler(protocol);
-        }
-        return null;
     }
 
-    private class FatJarURLStreamHandler extends URLStreamHandler {
-
-        @Override
-        protected void parseURL(URL u, String spec, int start, int limit) {
-            if (!spec.toLowerCase().startsWith(JAR_PROTOCOL)) {
-                throw new IllegalArgumentException("only support protocol: jar for FatJarURLStreamHandler");
-            } else {
-                String file = spec.substring(JAR_PROTOCOL.length());
-                setURL(u, JAR_PROTOCOL, null, -1, null, null, file, null, null);
-            }
-        }
-
-        @Override
-        protected URLConnection openConnection(URL u) throws IOException {
-            return new FatJarURLConnection(u);
-        }
+    @Override
+    protected URLConnection openConnection(URL u) throws IOException {
+        return new FatJarURLConnection(u);
     }
 
     private static class FatJarURLConnection extends JarURLConnection {
@@ -93,6 +67,10 @@ class FarJarURLStreamHandlerFactory implements URLStreamHandlerFactory {
         private JarEntry           jarEntry;
         private boolean            normalJarUrl;
         private static Set<String> notFoundResources = new HashSet<>();
+
+        static {
+            Class<?> clazz = JarURLInputStream.class;
+        }
 
         protected FatJarURLConnection(URL url) throws IOException {
             super(url);
