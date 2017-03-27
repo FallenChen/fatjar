@@ -40,12 +40,11 @@ import java.util.zip.ZipEntry;
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, threadSafe = true, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class FatJarMojo extends AbstractMojo {
 
-    private static final String    FAT_JAR_VERSION     = "1.0.0";
+    private static final String    FAT_JAR_BUILDING_TOOL_ID_KEY = "Fat-Jar-Building-Tool-Id";
+    private static final String    FAT_JAR_BUILDING_TOOL_ID     = "org.hellojavaer.fatjar-fatjar-maven-plugin";
 
-    private static final String    FAT_JAR_VERSION_KEY = "Fat-Jar-Version";
-
-    private static final String    START_CLASS_KEY     = "Start-Class";
-    private static final String    MAIN_CLASS_KEY      = "Main-Class";
+    private static final String    START_CLASS_KEY              = "Start-Class";
+    private static final String    MAIN_CLASS_KEY               = "Main-Class";
 
     @Parameter(defaultValue = "${project.artifacts}", required = true, readonly = true)
     private Collection<Artifact>   artifacts;
@@ -96,7 +95,6 @@ public class FatJarMojo extends AbstractMojo {
         }
         File directDependencyJarFile = null;
         Map<Artifact, String> artifactMap = new LinkedHashMap<Artifact, String>();
-        Map<String, Artifact> fileNameMap = new HashMap<String, Artifact>();
         for (Artifact artifact : artifacts) {
             boolean isSkip = false;
             for (Dependency dependency : dependencies) {//
@@ -121,16 +119,8 @@ public class FatJarMojo extends AbstractMojo {
             if (isSkip) {
                 continue;
             }
-            Artifact artifact0 = fileNameMap.get(artifact.getFile().getName());
-            if (artifact0 == null) {
-                String fileName = artifact.getFile().getName();
-                fileNameMap.put(fileName, artifact);
-                artifactMap.put(artifact, fileName);
-            } else {
-                String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
-                fileNameMap.put(fullFileName, artifact);
-                artifactMap.put(artifact, fullFileName);
-            }
+            String fullFileName = artifact.getGroupId() + "-" + artifact.getFile().getName();
+            artifactMap.put(artifact, fullFileName);
         }
         if (directDependencyJarFile == null) {
             throw new MojoExecutionException(
@@ -146,10 +136,10 @@ public class FatJarMojo extends AbstractMojo {
             directDependencyJarInputStream = new JarInputStream(new FileInputStream(directDependencyJarFile));
             Manifest manifest = directDependencyJarInputStream.getManifest();
             Attributes attributes = manifest.getMainAttributes();
-            if (attributes != null && attributes.getValue(FAT_JAR_VERSION_KEY) != null) {
+            if (attributes != null && attributes.getValue(FAT_JAR_BUILDING_TOOL_ID_KEY) != null) {
                 throw new IllegalArgumentException("can't repeated package fat jar for fat-jar");
             }
-            attributes.putValue(FAT_JAR_VERSION_KEY, FAT_JAR_VERSION);
+            attributes.putValue(FAT_JAR_BUILDING_TOOL_ID_KEY, FAT_JAR_BUILDING_TOOL_ID);
             if (startClass != null) {
                 attributes.putValue(START_CLASS_KEY, startClass);
             }

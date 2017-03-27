@@ -20,7 +20,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarFile;
 
@@ -30,15 +31,13 @@ import java.util.jar.JarFile;
  */
 class FatJarTempFileManager {
 
-    private static final String                                 FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
-    private static Logger                                       logger                = new Logger();
-    private static String                                       tempDir               = System.getProperty("user.home");
-    private static volatile File                                createdTempDir;
+    private static final String                   FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
+    private static Logger                         logger                = new Logger();
+    private static String                         tempDir               = System.getProperty("user.home");
+    private static volatile File                  createdTempDir;
 
     // key:'file:/a/b.jar!/c/d.jar'
-    private static final ConcurrentHashMap<String, FileWrapper> map                   = new ConcurrentHashMap();
-
-    private static final ConcurrentHashMap<String, Object>      lockMap               = new ConcurrentHashMap<>();
+    private static final Map<String, FileWrapper> fileMap               = new HashMap<>();
 
     static {
         if (logger.isDebugEnabled()) {
@@ -72,10 +71,6 @@ class FatJarTempFileManager {
                     if (!createdTempDir.exists()) {
                         createdTempDir.mkdirs();
                     }
-                } else {
-                    if (!createdTempDir.exists()) {
-                        createdTempDir.mkdirs();
-                    }
                 }
             }
         }
@@ -89,26 +84,35 @@ class FatJarTempFileManager {
 
     public static JarFile buildJarFile(String url, InputStream inputStream) throws IOException {
         initTempFileDir();
-        String fileName = URLEncoder.encode(url, "UTF-8");
-        synchronized (getLockObject(url)) {
-            FileWrapper fileWrapper = map.get(url);
-            JarFile jarFile = null;
+        String fileName = url.substring(url.lastIndexOf('/') + 1, url.length());
+        boolean isSnapshot = false;
+        if (fileName.toLowerCase().endsWith("-snapshot.jar")) {
+            fileName = url;
+            isSnapshot = true;
+        }
+        fileName = URLEncoder.encode(fileName, "UTF-8");
+        FileWrapper fileWrapper = fileMap.get(url);
+        if (fileWrapper != null) {
+            return fileWrapper.getJarFile();
+        }
+        synchronized (fileMap) {
+            fileWrapper = fileMap.get(url);
             if (fileWrapper != null) {
-                jarFile = fileWrapper.getJarFile();
+                return fileWrapper.getJarFile();
             }
-            if (jarFile != null) {
-                return jarFile;
-            }
-            File file = null;
-            file = new File(createdTempDir, fileName);
+            File file = new File(createdTempDir, fileName);
             if (file.exists()) {
-                if (fileName.toLowerCase().endsWith("-snapshot.jar")) {
+                if (isSnapshot) {
                     file.delete();
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
                         logger.info(String.format("+ %s | created a new temp file in %s", url, file.getAbsolutePath()));
                     }
-                }// else use exsit file
+                } else {//
+                    JarFile jarFile = new JarFile(file);
+                    fileMap.put(url, new FileWrapper(file, jarFile));
+                    return jarFile;//
+                }
             } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
@@ -121,14 +125,14 @@ class FatJarTempFileManager {
             while ((n = inputStream.read(buffer)) != -1) {
                 tempOut.write(buffer, 0, n);
             }
-            jarFile = new JarFile(file);
-            map.put(url, new FileWrapper(file, jarFile));
+            JarFile jarFile = new JarFile(file);
+            fileMap.put(url, new FileWrapper(file, jarFile));
             return jarFile;
         }
     }
 
     public static JarFile getJarFile(String key) {
-        FileWrapper fileWrapper = map.get(key);
+        FileWrapper fileWrapper = fileMap.get(key);
         if (fileWrapper != null) {
             return fileWrapper.getJarFile();
         } else {
@@ -144,16 +148,6 @@ class FatJarTempFileManager {
             }
         }
         return str;
-    }
-
-    private static Object getLockObject(String className) {
-        Object newLock = new Object();
-        Object lock = lockMap.putIfAbsent(className, newLock);
-        if (lock == null) {
-            return newLock;
-        } else {
-            return lock;
-        }
     }
 
     private static class FileWrapper {
