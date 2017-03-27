@@ -35,6 +35,8 @@ class FatJarTempFileManager {
     private static volatile File                  releaseTempDir;
     private static volatile File                  snapshotTempDir;
 
+    private static AtomicBoolean                  inited                = new AtomicBoolean(false);
+
     // key:'file:/a/b.jar!/c/d.jar'
     private static final Map<String, FileWrapper> fileMap               = new HashMap<>();
 
@@ -50,16 +52,6 @@ class FatJarTempFileManager {
             tempDir = userDefinedTempDir;
         }
     }
-
-    public static String getTempDir() {
-        return tempDir;
-    }
-
-    public static void setTempDir(String tempDir) {
-        FatJarTempFileManager.tempDir = filterString(tempDir);
-    }
-
-    private static AtomicBoolean tag = new AtomicBoolean(false);
 
     public static void initTempFileDir() {
         if (releaseTempDir == null || !releaseTempDir.exists()) {
@@ -84,7 +76,8 @@ class FatJarTempFileManager {
                 }
             }
         }
-        if (tag.compareAndSet(false, true)) {
+        //
+        if (inited.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
                 logger.info(String.format("[createTempDir] temporary direcotry is at %s", tempDir
                                                                                           + FATJAR_TEMP_FILE_PATH));
@@ -92,40 +85,41 @@ class FatJarTempFileManager {
         }
     }
 
-    public static JarFile buildJarFile(String fullPath, InputStream inputStream) throws IOException {
+    public static JarFile buildJarFile(String fullFilePath, InputStream inputStream) throws IOException {
         initTempFileDir();
-        String fileName = fullPath.substring(fullPath.lastIndexOf('/') + 1, fullPath.length());
+        String fileName = fullFilePath.substring(fullFilePath.lastIndexOf('/') + 1, fullFilePath.length());
         fileName = URLEncoder.encode(fileName, "UTF-8");
-        FileWrapper fileWrapper = fileMap.get(fullPath);
+        FileWrapper fileWrapper = fileMap.get(fullFilePath);
         if (fileWrapper != null) {
             return fileWrapper.getJarFile();
         }
         synchronized (fileMap) {
-            fileWrapper = fileMap.get(fullPath);
+            fileWrapper = fileMap.get(fullFilePath);
             if (fileWrapper != null) {
                 return fileWrapper.getJarFile();
             }
             File file = null;
             if (fileName.toLowerCase().endsWith("-snapshot.jar")) {
-                String actFileName = getActFileName(fullPath, fileName);
+                String actFileName = getActFileName(fullFilePath, fileName);
                 file = new File(snapshotTempDir, actFileName);
                 if (file.exists()) {
                     file.delete();
                 }
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("+ %s | created a new temp file in %s", fullPath, file.getAbsolutePath()));
+                    logger.info(String.format("+ %s | created a new temp file in %s", fullFilePath,
+                                              file.getAbsolutePath()));
                 }
             } else {
                 file = new File(releaseTempDir, fileName);
                 if (file.exists()) {
                     JarFile jarFile = new JarFile(file);
-                    fileMap.put(fullPath, new FileWrapper(file, jarFile));
+                    fileMap.put(fullFilePath, new FileWrapper(file, jarFile));
                     return jarFile;//
                 } else {
                     file.createNewFile();
                     if (logger.isInfoEnabled()) {
-                        logger.info(String.format("+ %s | created a new temp file in %s", fullPath,
+                        logger.info(String.format("+ %s | created a new temp file in %s", fullFilePath,
                                                   file.getAbsolutePath()));
                     }
                 }
@@ -138,12 +132,12 @@ class FatJarTempFileManager {
                 tempOut.write(buffer, 0, n);
             }
             JarFile jarFile = new JarFile(file);
-            fileMap.put(fullPath, new FileWrapper(file, jarFile));
+            fileMap.put(fullFilePath, new FileWrapper(file, jarFile));
             return jarFile;
         }
     }
 
-    private static String getActFileName(String fullPath, String fileName) throws IOException {
+    private static String getActFileName(String fullFilePath, String fileName) throws IOException {
         File catalogFile = new File(snapshotTempDir, "catalog.properties");
         if (!catalogFile.exists()) {
             catalogFile.createNewFile();
@@ -155,10 +149,10 @@ class FatJarTempFileManager {
             in = new BufferedInputStream(new FileInputStream(catalogFile));
             catalog.load(in);
             Properties snapshotFileCatalog = catalog;
-            String actName = snapshotFileCatalog.getProperty(fullPath);
+            String actName = snapshotFileCatalog.getProperty(fullFilePath);
             if (actName == null) {
                 actName = System.currentTimeMillis() + "-" + fileName;
-                snapshotFileCatalog.setProperty(fullPath, actName);
+                snapshotFileCatalog.setProperty(fullFilePath, actName);
                 out = new FileOutputStream(catalogFile);
                 snapshotFileCatalog.store(out, null);
             }
