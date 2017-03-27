@@ -40,30 +40,32 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoader extends URLClassLoader {
 
-    private static final Logger               logger                   = new Logger();
-    private static final String               JAR_PROTOCOL             = "jar:";
-    private static final String               CLASS_SUFFIX             = ".class";
-    private static final String               SEPARATOR                = "!/";
+    private static final String               FAT_JAR_BUILDING_TOOL_ID_KEY = "Fat-Jar-Building-Tool-Id";
 
-    private static ClassLoader                j2seClassLoader          = null;
-    private static SecurityManager            securityManager          = null;
+    private static final Logger               logger                       = new Logger();
+    private static final String               JAR_PROTOCOL                 = "jar:";
+    private static final String               CLASS_SUFFIX                 = ".class";
+    private static final String               SEPARATOR                    = "!/";
 
-    private boolean                           delegate                 = true;
+    private static ClassLoader                j2seClassLoader              = null;
+    private static SecurityManager            securityManager              = null;
+
+    private boolean                           delegate                     = true;
 
     private JarFile                           fatJar;
-    private Map<String, JarFile>              dependencyJars           = new LinkedHashMap<>();
-    private List<FatJarClassLoader>           subClassLoaders          = new ArrayList<>();
+    private Map<String, JarFile>              dependencyJars               = new LinkedHashMap<>();
+    private List<FatJarClassLoader>           subClassLoaders              = new ArrayList<>();
 
-    private Map<String, ResourceEntry>        loadedResources          = new HashMap<>();
-    private Set<String>                       notFoundResources        = new HashSet<>();
+    private Map<String, ResourceEntry>        loadedResources              = new HashMap<>();
+    private Set<String>                       notFoundResources            = new HashSet<>();
 
-    private ConcurrentHashMap<String, Object> lockMap                  = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Object> lockMap                      = new ConcurrentHashMap<>();
 
-    private boolean                           initedNestedJars         = false;
+    private boolean                           initedNestedJars             = false;
 
-    private ClassLoader                       child                    = null;
+    private ClassLoader                       child                        = null;
 
-    private boolean                           useSelfAsChildrensParent = false;
+    private boolean                           useSelfAsChildrensParent     = false;
 
     static {
         //
@@ -137,7 +139,7 @@ public class FatJarClassLoader extends URLClassLoader {
                                 try {
                                     InputStream inputStream = fatJar.getInputStream(jarEntry);
                                     URL nestedJarURL = new URL(getURL().toString() + SEPARATOR + jarEntry.getName());
-                                    JarFile nestedJarFile = FatJarTempFileManager.buildJarFile(nestedJarURL.toString(),
+                                    JarFile nestedJarFile = FatJarTempFileManager.buildJarFile(nestedJarURL.getFile(),
                                                                                                inputStream);
                                     Manifest manifest = nestedJarFile.getManifest();
                                     if (isFatJar(manifest)) {
@@ -359,8 +361,8 @@ public class FatJarClassLoader extends URLClassLoader {
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-        LinkedHashSet result = new LinkedHashSet();
         synchronized (getLockObject(name)) {
+            LinkedHashSet result = new LinkedHashSet();
             // 1. load by j2se
             URL url = j2seClassLoader.getResource(name);
             if (url != null) {
@@ -770,7 +772,7 @@ public class FatJarClassLoader extends URLClassLoader {
     static boolean isFatJar(Manifest manifest) {
         if (manifest != null) {
             Attributes attributes = manifest.getMainAttributes();
-            String fatJarVersion = attributes.getValue("Fat-Jar-Version");
+            String fatJarVersion = attributes.getValue(FAT_JAR_BUILDING_TOOL_ID_KEY);
             if (fatJarVersion != null) {
                 return true;
             }
