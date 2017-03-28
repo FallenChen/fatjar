@@ -34,8 +34,8 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
+ * The implements of this class referenced {@link org.apache.catalina.loader.WebappClassLoaderBase}
  *
- * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 18/03/2017.
  */
 public class FatJarClassLoader extends URLClassLoader {
