@@ -137,7 +137,7 @@ public class FatJarMojo extends AbstractMojo {
             Manifest manifest = directDependencyJarInputStream.getManifest();
             Attributes attributes = manifest.getMainAttributes();
             if (attributes != null && attributes.getValue(FAT_JAR_BUILDING_TOOL_ID_KEY) != null) {
-                throw new IllegalArgumentException("can't repeated package fat jar for fat-jar");
+                throw new IllegalArgumentException("can't repeated package fat jar for a fat-jar");
             }
             attributes.putValue(FAT_JAR_BUILDING_TOOL_ID_KEY, FAT_JAR_BUILDING_TOOL_ID);
             if (startClass != null) {
