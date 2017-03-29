@@ -49,29 +49,31 @@ class FatJarReflectionUtils {
                 }
             }
         }
-        Method method = methods.get(methodName);
-        if (method == null) {
+        if (methods.containsKey(methodName)) {
+            Method method = methods.get(methodName);
+            method.setAccessible(true);
+            return method;
+        } else {
             synchronized (methods) {
-                method = methods.get(methodName);
-                if (method == null) {
+                if (methods.containsKey(methodName)) {
+                    return methods.get(methodName);
+                } else {
                     Class<?> clazz0 = clazz;
                     while (clazz0 != null) {
-                        Method temp = null;
                         try {
-                            temp = clazz0.getDeclaredMethod(methodName, parameterTypes);
-                            temp.setAccessible(true);
-                            methods.put(methodName, temp);
-                            method = temp;
-                            break;
+                            Method method = clazz0.getDeclaredMethod(methodName, parameterTypes);
+                            method.setAccessible(true);
+                            methods.put(methodName, method);
+                            return method;
                         } catch (Exception e) {
                             clazz0 = clazz0.getSuperclass();
                             continue;
                         }
                     }
+                    methods.put(methodName, null);
+                    return null;
                 }
             }
         }
-        method.setAccessible(true);
-        return method;
     }
 }

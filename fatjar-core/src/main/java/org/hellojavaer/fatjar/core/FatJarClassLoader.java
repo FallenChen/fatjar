@@ -34,8 +34,8 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
+ * The implement of this class referenced {@link org.apache.catalina.loader.WebappClassLoaderBase}
  *
- * 
  * @author <a href="mailto:hellojavaer@gmail.com">Kaiming Zou</a>,created on 18/03/2017.
  */
 public class FatJarClassLoader extends URLClassLoader {
@@ -52,7 +52,7 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private boolean                           delegate                     = true;
 
-    private JarFile                           fatJar;
+    private JarFile                           fatJar                       = null;
     private Map<String, JarFile>              dependencyJars               = new LinkedHashMap<>();
     private List<FatJarClassLoader>           subClassLoaders              = new ArrayList<>();
 
@@ -634,6 +634,18 @@ public class FatJarClassLoader extends URLClassLoader {
             loadedResources.put(name, resource);
             return resource;
         }
+    }
+
+    protected ClassLoader getChild() {
+        return child;
+    }
+
+    protected boolean isDelegate() {
+        return delegate;
+    }
+
+    protected boolean isUseSelfAsChildrensParent() {
+        return useSelfAsChildrensParent;
     }
 
     private Object getLockObject(String className) {
