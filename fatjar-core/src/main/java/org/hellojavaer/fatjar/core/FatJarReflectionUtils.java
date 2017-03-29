@@ -50,7 +50,9 @@ class FatJarReflectionUtils {
             }
         }
         if (methods.containsKey(methodName)) {
-            return methods.get(methodName);
+            Method method = methods.get(methodName);
+            method.setAccessible(true);
+            return method;
         } else {
             synchronized (methods) {
                 if (methods.containsKey(methodName)) {
