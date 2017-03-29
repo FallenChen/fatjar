@@ -31,13 +31,13 @@ import java.util.jar.Manifest;
  */
 public class FatJarClassLoaderProxy extends URLClassLoader {
 
-    private static final Logger     logger                  = new Logger();
+    private static final Logger     logger             = new Logger();
 
-    private boolean                 delegate                = true;
-    private boolean                 nestedDelegate          = true;
-    private ClassLoader             child                   = null;
+    private boolean                 delegate           = true;
+    private boolean                 nestedDelegate     = true;
+    private ClassLoader             child              = null;
 
-    private List<FatJarClassLoader> fatJarClassLoaders      = new ArrayList<>();
+    private List<FatJarClassLoader> fatJarClassLoaders = new ArrayList<>();
 
     static {
         if (logger.isDebugEnabled()) {
@@ -128,10 +128,6 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
                 jars.add(file);
             }
         }
-    }
-
-    protected ClassLoader getChild() {
-        return child;
     }
 
     @Override
@@ -329,5 +325,17 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
     protected void addURL(URL url) {
         super.addURL(url);
         initOneURL(url);
+    }
+
+    protected ClassLoader getChild() {
+        return child;
+    }
+
+    protected boolean isDelegate() {
+        return delegate;
+    }
+
+    protected boolean isNestedDelegate() {
+        return nestedDelegate;
     }
 }
