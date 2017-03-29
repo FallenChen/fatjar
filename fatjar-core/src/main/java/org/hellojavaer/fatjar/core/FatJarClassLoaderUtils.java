@@ -37,7 +37,7 @@ public class FatJarClassLoaderUtils {
 
     private static boolean injectedFatJarUrlProtocolHandler = false;
 
-    private static URL[]   systemClassPaths;
+    private static URL[]   systemClassPaths                 = null;
 
     static {
         if (logger.isDebugEnabled()) {

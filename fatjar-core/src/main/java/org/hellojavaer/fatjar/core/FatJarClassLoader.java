@@ -52,7 +52,7 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private boolean                           delegate                     = true;
 
-    private JarFile                           fatJar;
+    private JarFile                           fatJar                       = null;
     private Map<String, JarFile>              dependencyJars               = new LinkedHashMap<>();
     private List<FatJarClassLoader>           subClassLoaders              = new ArrayList<>();
 

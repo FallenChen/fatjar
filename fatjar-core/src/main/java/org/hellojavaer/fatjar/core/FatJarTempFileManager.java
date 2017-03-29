@@ -36,10 +36,10 @@ class FatJarTempFileManager {
     private static int                            MAX_NUMBER_OF_FILES   = 10000;
 
     private static String                         tempDir               = System.getProperty("user.home");
-    private static volatile File                  releaseTempDir;
-    private static volatile File                  snapshotTempDir;
+    private static volatile File                  releaseTempDir        = null;
+    private static volatile File                  snapshotTempDir       = null;
 
-    private static volatile Properties            snapshotFileCatalog;
+    private static volatile Properties            snapshotFileCatalog   = null;
 
     private static AtomicBoolean                  inited                = new AtomicBoolean(false);
 
