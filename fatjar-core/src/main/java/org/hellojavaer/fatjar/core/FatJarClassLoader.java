@@ -67,6 +67,9 @@ public class FatJarClassLoader extends URLClassLoader {
 
     private boolean                           useSelfAsChildrensParent     = false;
 
+    private int                               fatJarClassLoaderLevel       = 1;
+    private FatJarClassLoader                 fatJarClassLoaderParent      = null;
+
     static {
         //
         if (logger.isDebugEnabled()) {
@@ -144,12 +147,22 @@ public class FatJarClassLoader extends URLClassLoader {
                                     Manifest manifest = nestedJarFile.getManifest();
                                     if (isFatJar(manifest)) {
                                         if (useSelfAsChildrensParent) {
-                                            subClassLoaders.add(new FatJarClassLoader(nestedJarFile, nestedJarURL,
-                                                                                      this, child, delegate, false));
+                                            FatJarClassLoader subClassLoader = new FatJarClassLoader(nestedJarFile,
+                                                                                                     nestedJarURL,
+                                                                                                     this, child,
+                                                                                                     delegate, false);
+                                            subClassLoader.fatJarClassLoaderLevel = this.fatJarClassLoaderLevel + 1;
+                                            subClassLoader.fatJarClassLoaderParent = this;
+                                            subClassLoaders.add(subClassLoader);
                                         } else {
-                                            subClassLoaders.add(new FatJarClassLoader(nestedJarFile, nestedJarURL,
-                                                                                      getParent(), child, delegate,
-                                                                                      false));
+                                            FatJarClassLoader subClassLoader = new FatJarClassLoader(nestedJarFile,
+                                                                                                     nestedJarURL,
+                                                                                                     getParent(),
+                                                                                                     child, delegate,
+                                                                                                     false);
+                                            subClassLoader.fatJarClassLoaderLevel = this.fatJarClassLoaderLevel + 1;
+                                            subClassLoader.fatJarClassLoaderParent = this;
+                                            subClassLoaders.add(subClassLoader);
                                         }
                                     } else {
                                         dependencyJars.put(jarEntry.getName(), nestedJarFile);
@@ -173,7 +186,7 @@ public class FatJarClassLoader extends URLClassLoader {
         sb.append(child == null ? "null" : child.getClass().getName());
         sb.append("}->{");
         sb.append("own:");
-        sb.append(this.getClass().getName());
+        sb.append(toSimpleString());
         sb.append(",delegate:");
         sb.append(delegate);
         sb.append(",useSelfAsChildrensParent:");
@@ -560,11 +573,21 @@ public class FatJarClassLoader extends URLClassLoader {
             }
             Class clazz = defineClass(name, resource.getBytes(), 0, resource.getBytes().length, codeSource);
             resource.setClazz(clazz);
+            if (logger.isDebugEnabled()) {
+                logger.debug((this.toSimpleString() + "["//
+                              + (fatJarClassLoaderParent == null ? "" : fatJarClassLoaderParent.toSimpleString()) //
+                              + "]"//
+                              + " loaded class " + clazz.getName() + " from " + codeSource.getLocation()));
+            }
             return clazz;
         }
     }
 
-    protected ResourceEntry findResourceInternal(String name, String path) {
+    private String toSimpleString() {
+        return fatJarClassLoaderLevel + "-" + getClass().getSimpleName() + "@" + Integer.toHexString(hashCode());
+    }
+
+    protected synchronized ResourceEntry findResourceInternal(String name, String path) {
         if (filterResource(path)) {
             return null;
         }
@@ -604,7 +627,7 @@ public class FatJarClassLoader extends URLClassLoader {
                 int pos = 0;
                 while (true) {
                     int next = inputStream.read(bytes, pos, bytes.length - pos);
-                    if (next <= next) {
+                    if (next <= 0) {
                         break;
                     }
                     pos += next;
@@ -679,7 +702,7 @@ public class FatJarClassLoader extends URLClassLoader {
         }
     }
 
-    static Class<?> invokeFindClass(ClassLoader classLoader, String name) {
+    static Class<?> invokeFindClass(ClassLoader classLoader, String name) throws ClassNotFoundException {
         if (classLoader == null) {
             return null;
         }
@@ -691,6 +714,13 @@ public class FatJarClassLoader extends URLClassLoader {
             while (temp != null) {
                 if (temp instanceof ClassNotFoundException) {
                     return null;
+                } else if (temp instanceof LinkageError) {
+                    if (temp.getMessage() != null
+                        && temp.getMessage().contains("attempted  duplicate class definition for name")) {
+                        return classLoader.loadClass(name);
+                    } else {
+                        throw new RuntimeException(e);
+                    }
                 } else {
                     temp = temp.getCause();
                 }
