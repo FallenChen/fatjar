@@ -92,8 +92,8 @@ public class FatJarClassLoaderUtils {
                 fatJarClassPaths = systemClassPaths;
             }
 
-            boolean delegate = false;
-            boolean nestedDelegate = false;
+            boolean delegate = true;
+            boolean nestedDelegate = true;
             Boolean childDelegate = getAndResetDelegate(targetClassLoader);
             if (childDelegate != null) {
                 nestedDelegate = childDelegate;

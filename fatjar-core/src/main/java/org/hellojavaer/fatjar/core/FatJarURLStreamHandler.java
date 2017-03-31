@@ -157,7 +157,7 @@ class FatJarURLStreamHandler extends URLStreamHandler {
                                     notFoundResources.add(tempPath);
                                     return;
                                 } else {
-                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath,
+                                    jarFile = FatJarTempFileManager.buildJarFile(tempPath, jarEntry.getTime(),
                                                                                  jarFile.getInputStream(jarEntry));
                                 }
                             }

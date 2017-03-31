@@ -33,6 +33,8 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
 
     private static final Logger     logger             = new Logger();
 
+    private static ClassLoader      j2seClassLoader    = null;
+
     private boolean                 delegate           = true;
     private boolean                 nestedDelegate     = true;
     private ClassLoader             child              = null;
@@ -43,6 +45,17 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
         if (logger.isDebugEnabled()) {
             logger.debug("FatJarClassLoaderProxy is loaded by " + FatJarClassLoaderProxy.class.getClassLoader());
         }
+
+        //
+        ClassLoader cl = String.class.getClassLoader();
+        if (cl == null) {
+            cl = getSystemClassLoader();
+            while (cl.getParent() != null) {
+                cl = cl.getParent();
+            }
+        }
+        j2seClassLoader = cl;
+        //
     }
 
     public FatJarClassLoaderProxy(URL[] urls, ClassLoader parent, ClassLoader child, boolean delegate,
@@ -199,6 +212,19 @@ public class FatJarClassLoaderProxy extends URLClassLoader {
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         Class<?> clazz = null;
+        // 0. load by j2se
+        try {
+            clazz = j2seClassLoader.loadClass(name);
+            if (clazz != null) {
+                if (resolve) {
+                    resolveClass(clazz);
+                }
+                return clazz;
+            }
+        } catch (ClassNotFoundException e) {
+            // ignore;
+        }
+
         // 1. parent delegate
         if (delegate && getParent() != null) {
             clazz = FatJarClassLoader.invokeLoadClass(getParent(), name, resolve);
