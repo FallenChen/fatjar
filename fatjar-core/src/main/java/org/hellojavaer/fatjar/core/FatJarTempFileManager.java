@@ -108,14 +108,14 @@ class FatJarTempFileManager {
             if (file.exists()) {
                 JarFile jarFile = new JarFile(file);
                 fileMap.put(fullFilePath, new FileWrapper(file, jarFile));
-                if (logger.isInfoEnabled()) {
-                    logger.info(String.format("link %s to %s", fullFilePath, file.getAbsolutePath()));
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("link %s to %s", fullFilePath, file.getAbsolutePath()));
                 }
                 return jarFile;//
             } else {
                 file.createNewFile();
-                if (logger.isInfoEnabled()) {
-                    logger.info(String.format("decompress %s to %s", fullFilePath, file.getAbsolutePath()));
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("decompress %s to %s", fullFilePath, file.getAbsolutePath()));
                 }
             }
             //
