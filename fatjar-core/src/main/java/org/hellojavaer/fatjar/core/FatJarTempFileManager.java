@@ -15,11 +15,13 @@
  */
 package org.hellojavaer.fatjar.core;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarFile;
 
@@ -31,15 +33,11 @@ class FatJarTempFileManager {
 
     private static Logger                         logger                = new Logger();
 
-    private static final String                   FATJAR_TEMP_FILE_PATH = "/.fatjar/temp";
-    private static final String                   CATALOG_FILE_NAME     = "catalog.properties";
-    private static int                            MAX_NUMBER_OF_FILES   = 10000;
+    private static final String                   FATJAR_TEMP_FILE_PATH = "/.fatjar/temp/lib";
+
+    private static volatile File                  createdTempDir;
 
     private static String                         tempDir               = System.getProperty("user.home");
-    private static volatile File                  releaseTempDir        = null;
-    private static volatile File                  snapshotTempDir       = null;
-
-    private static volatile Properties            snapshotFileCatalog   = null;
 
     private static AtomicBoolean                  inited                = new AtomicBoolean(false);
 
@@ -60,55 +58,13 @@ class FatJarTempFileManager {
     }
 
     public static void initTempFileDir() {
-        if (releaseTempDir == null || !releaseTempDir.exists()) {
+        if (createdTempDir == null || !createdTempDir.exists()) {
             synchronized (FatJarTempFileManager.class) {
-                if (releaseTempDir == null || !releaseTempDir.exists()) {
-                    String path = tempDir + FATJAR_TEMP_FILE_PATH + "/release";
-                    releaseTempDir = new File(path);
-                    if (!releaseTempDir.exists()) {
-                        releaseTempDir.mkdirs();
-                    }
-                }
-            }
-        }
-        if (snapshotTempDir == null || !snapshotTempDir.exists()) {
-            synchronized (FatJarTempFileManager.class) {
-                if (snapshotTempDir == null || !snapshotTempDir.exists()) {
-                    String path = tempDir + FATJAR_TEMP_FILE_PATH + "/snapshot";
-                    snapshotTempDir = new File(path);
-                    if (!snapshotTempDir.exists()) {
-                        snapshotTempDir.mkdirs();
-                    }
-                }
-            }
-        }
-        //
-        if (snapshotFileCatalog == null) {
-            synchronized (FatJarTempFileManager.class) {
-                if (snapshotFileCatalog == null) {
-                    File catalogFile = new File(snapshotTempDir, CATALOG_FILE_NAME);
-                    if (!catalogFile.exists()) {
-                        try {
-                            catalogFile.createNewFile();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    InputStream in = null;
-                    try {
-                        in = new BufferedInputStream(new FileInputStream(catalogFile));
-                        Properties properties = new Properties();
-                        properties.load(in);
-                        snapshotFileCatalog = properties;
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        if (in != null) {
-                            try {
-                                in.close();
-                            } catch (Exception e) {
-                            }
-                        }
+                if (createdTempDir == null || !createdTempDir.exists()) {
+                    String path = tempDir + FATJAR_TEMP_FILE_PATH;
+                    createdTempDir = new File(path);
+                    if (!createdTempDir.exists()) {
+                        createdTempDir.mkdirs();
                     }
                 }
             }
@@ -123,10 +79,13 @@ class FatJarTempFileManager {
         }
     }
 
-    public static JarFile buildJarFile(String fullFilePath, InputStream inputStream) throws IOException {
+    /**
+     * use fileName and lastModified identify a file
+     */
+    public static JarFile buildJarFile(String fullFilePath, long lastModified, InputStream inputStream)
+                                                                                                       throws IOException {
         initTempFileDir();
         String fileName = fullFilePath.substring(fullFilePath.lastIndexOf('/') + 1, fullFilePath.length());
-        fileName = URLEncoder.encode(fileName, "UTF-8");
         FileWrapper fileWrapper = fileMap.get(fullFilePath);
         if (fileWrapper != null) {
             return fileWrapper.getJarFile();
@@ -136,39 +95,27 @@ class FatJarTempFileManager {
             if (fileWrapper != null) {
                 return fileWrapper.getJarFile();
             }
-            File file = null;
-
-            if (fileName.toLowerCase().endsWith("-snapshot.jar")) {
-                String realFileName = getRealFileName(fullFilePath, fileName);
-                File hashDir = new File(snapshotTempDir, encodeFileName(fullFilePath));
-                if (!hashDir.exists()) {
-                    hashDir.mkdirs();
+            //
+            int lastIndexOfDot = fileName.lastIndexOf('.');
+            // standardize file name
+            if (lastModified < 0) {
+                lastModified = 0;
+            }
+            String fileNameWithLastModified = fileName.substring(0, lastIndexOfDot) + "-" + lastModified
+                                              + fileName.substring(lastIndexOfDot);
+            fileNameWithLastModified = URLEncoder.encode(fileNameWithLastModified, "UTF-8");
+            File file = new File(createdTempDir, fileNameWithLastModified);
+            if (file.exists()) {
+                JarFile jarFile = new JarFile(file);
+                fileMap.put(fullFilePath, new FileWrapper(file, jarFile));
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("link %s to %s", fullFilePath, file.getAbsolutePath()));
                 }
-                file = new File(hashDir, realFileName);
-                if (file.exists()) {
-                    file.delete();
-                }
+                return jarFile;//
+            } else {
                 file.createNewFile();
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("+ %s | created a new temp file in %s", fullFilePath,
-                                              file.getAbsolutePath()));
-                }
-            } else {
-                File hashDir = new File(releaseTempDir, encodeFileName(fileName));
-                if (!hashDir.exists()) {
-                    hashDir.mkdirs();
-                }
-                file = new File(hashDir, fileName);
-                if (file.exists()) {
-                    JarFile jarFile = new JarFile(file);
-                    fileMap.put(fullFilePath, new FileWrapper(file, jarFile));
-                    return jarFile;//
-                } else {
-                    file.createNewFile();
-                    if (logger.isInfoEnabled()) {
-                        logger.info(String.format("+ %s | created a new temp file in %s", fullFilePath,
-                                                  file.getAbsolutePath()));
-                    }
+                    logger.info(String.format("decompress %s to %s", fullFilePath, file.getAbsolutePath()));
                 }
             }
             //
@@ -184,39 +131,6 @@ class FatJarTempFileManager {
         }
     }
 
-    private static String encodeFileName(String fileName) {
-        int hashCode = fileName.hashCode();
-        if (hashCode < 0) {
-            hashCode = -hashCode;
-        }
-        return Integer.toString(hashCode % MAX_NUMBER_OF_FILES);
-    }
-
-    private static String getRealFileName(String fullFilePath, String fileName) throws IOException {
-        File catalogFile = new File(snapshotTempDir, CATALOG_FILE_NAME);
-        if (!catalogFile.exists()) {
-            catalogFile.createNewFile();
-        }
-        OutputStream out = null;
-        try {
-            String actName = snapshotFileCatalog.getProperty(fullFilePath);
-            if (actName == null) {
-                actName = System.currentTimeMillis() + "-" + fileName;
-                snapshotFileCatalog.setProperty(fullFilePath, actName);
-                out = new FileOutputStream(catalogFile);
-                snapshotFileCatalog.store(out, null);
-            }
-            return actName;
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (Exception e1) {
-                }
-            }
-        }
-    }
-
     public static JarFile getJarFile(String key) {
         FileWrapper fileWrapper = fileMap.get(key);
         if (fileWrapper != null) {
@@ -224,16 +138,6 @@ class FatJarTempFileManager {
         } else {
             return null;
         }
-    }
-
-    private static String filterString(String str) {
-        if (str != null) {
-            str = str.trim();
-            if (str.length() == 0) {
-                str = null;
-            }
-        }
-        return str;
     }
 
     private static class FileWrapper {

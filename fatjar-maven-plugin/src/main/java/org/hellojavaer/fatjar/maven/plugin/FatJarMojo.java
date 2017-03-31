@@ -27,10 +27,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.*;
 import java.util.*;
-import java.util.jar.Attributes;
-import java.util.jar.JarInputStream;
-import java.util.jar.JarOutputStream;
-import java.util.jar.Manifest;
+import java.util.jar.*;
 import java.util.zip.ZipEntry;
 
 /**
@@ -161,8 +158,21 @@ public class FatJarMojo extends AbstractMojo {
 
             // 3.import indirect dependency
             for (Map.Entry<Artifact, String> entry : artifactMap.entrySet()) {
-                out.putNextEntry(new ZipEntry(libDirectory + entry.getValue()));
-                IOUtils.copy(new FileInputStream(entry.getKey().getFile()), out);
+                ZipEntry zipEntry0 = new ZipEntry(libDirectory + entry.getValue());
+                File file = entry.getKey().getFile();
+                long lastModified = -1;
+                try {
+                    JarFile temp = new JarFile(file);
+                    JarEntry jarEntry = temp.getJarEntry("META-INF/MANIFEST.MF");
+                    if (jarEntry != null) {
+                        lastModified = jarEntry.getTime();
+                    }
+                } catch (Throwable e) {
+                    getLog().warn(entry.getValue() + " isn't a jar");
+                }
+                zipEntry0.setTime(lastModified);// mark down the lastModified
+                out.putNextEntry(zipEntry0);
+                IOUtils.copy(new FileInputStream(file), out);
                 out.closeEntry();
             }
         } catch (IOException e) {
