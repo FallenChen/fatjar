@@ -1,6 +1,6 @@
 # FAT-JAR
 
-fatjar is a simple solution to solve the conflict of jars by providing a independent classloader for each fat-jar.
+fatjar is a simple solution to solve the conflict of jars by packaging a jar's dependent jars into its own package.
 
 
 ## License
