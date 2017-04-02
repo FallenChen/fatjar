@@ -11,6 +11,9 @@
     <version>1.0.0.M1</version>
     <description>fatjar is a simple solution to solve the conflict of jars by packaging a jar's dependent jars into its own package.</description>
 
+    <name>fatjar-maven-plugin</name>
+    <url>https://github.com/hellojavaer/fatjar</url>
+
     <properties>
         <gpg.skip>false</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
