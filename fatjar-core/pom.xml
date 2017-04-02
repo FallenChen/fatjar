@@ -6,8 +6,12 @@
 
     <groupId>org.hellojavaer.fatjar</groupId>
     <artifactId>fatjar-core</artifactId>
+    <packaging>jar</packaging>
     <version>1.0.0-SNAPSHOT</version>
     <description>fatjar is a simple solution to solve the conflict of jars by packaging a jar's dependent jars into its own package.</description>
+
+    <name>fatjar-core</name>
+    <url>https://github.com/hellojavaer/fatjar</url>
 
     <properties>
         <gpg.skip>true</gpg.skip>
