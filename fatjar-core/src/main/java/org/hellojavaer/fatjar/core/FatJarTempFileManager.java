@@ -31,18 +31,20 @@ import java.util.jar.JarFile;
  */
 class FatJarTempFileManager {
 
-    private static Logger                         logger                = new Logger();
+    private static Logger                         logger                     = new Logger();
 
-    private static final String                   FATJAR_TEMP_FILE_PATH = "/.fatjar/temp/lib";
+    private static final String                   FATJAR_TEMP_FILE_BASE_PATH = "/.fatjar";
+
+    private static final String                   FATJAR_TEMP_FILE_LIB_PATH  = FATJAR_TEMP_FILE_BASE_PATH + "/temp/lib";
 
     private static volatile File                  createdTempDir;
 
-    private static String                         tempDir               = System.getProperty("user.home");
+    private static String                         tempDir                    = System.getProperty("user.home");
 
-    private static AtomicBoolean                  inited                = new AtomicBoolean(false);
+    private static AtomicBoolean                  inited                     = new AtomicBoolean(false);
 
     // key:'file:/a/b.jar!/c/d.jar'
-    private static final Map<String, FileWrapper> fileMap               = new HashMap<>();
+    private static final Map<String, FileWrapper> fileMap                    = new HashMap<>();
 
     static {
         if (logger.isDebugEnabled()) {
@@ -61,7 +63,7 @@ class FatJarTempFileManager {
         if (createdTempDir == null || !createdTempDir.exists()) {
             synchronized (FatJarTempFileManager.class) {
                 if (createdTempDir == null || !createdTempDir.exists()) {
-                    String path = tempDir + FATJAR_TEMP_FILE_PATH;
+                    String path = tempDir + FATJAR_TEMP_FILE_LIB_PATH;
                     createdTempDir = new File(path);
                     if (!createdTempDir.exists()) {
                         createdTempDir.mkdirs();
@@ -74,7 +76,7 @@ class FatJarTempFileManager {
         if (inited.compareAndSet(false, true)) {
             if (logger.isInfoEnabled()) {
                 logger.info(String.format("[createTempDir] temporary direcotry is at %s", tempDir
-                                                                                          + FATJAR_TEMP_FILE_PATH));
+                                                                                          + FATJAR_TEMP_FILE_BASE_PATH));
             }
         }
     }
