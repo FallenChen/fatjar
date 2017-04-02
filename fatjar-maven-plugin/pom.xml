@@ -16,7 +16,7 @@
 
     <properties>
         <gpg.skip>false</gpg.skip>
-        <javadoc.skip>true</javadoc.skip>
+        <javadoc.skip>false</javadoc.skip>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.7</jdk.version>
     </properties>
