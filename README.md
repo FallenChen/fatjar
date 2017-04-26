@@ -8,6 +8,13 @@ fatjar is a simple solution to solve the conflict of jars by packaging a jar's d
 fatjar is licensed under **Apache Software License, Version 2.0**.
 
 
+## News
+- version 1.0.0.M1 released.
+
+### [Release Notes](https://github.com/hellojavaer/fatjar/releases)
+
+## Extensions in the latest version 1.0.0.M1
+
 
 ## Documentation
 
